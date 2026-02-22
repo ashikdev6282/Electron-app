@@ -6,17 +6,22 @@ import BottomNav from "./components/BottomNav";
 
 export default function App() {
   const [tab, setTab] = useState("dictate");
+  const [dictations, setDictations] = useState([]);
 
   return (
-    <div className="app">
-      {/* MAIN CONTENT */}
-      <div style={{ flex: 1, overflow: "auto" }}>
-        {tab === "dictate" && <Dictate />}
-        {tab === "list" && <MyDictations />}
+    <div className="h-full bg-black">
+      <div className="pb-16">
+        {tab === "dictate" && (
+          <Dictate onSaveDictation={setDictations} />
+        )}
+
+        {tab === "list" && (
+          <MyDictations dictations={dictations} />
+        )}
+
         {tab === "settings" && <Settings />}
       </div>
 
-      {/* BOTTOM NAV */}
       <BottomNav tab={tab} setTab={setTab} />
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export default function Dictate() {
+export default function Dictate({ onSaveDictation }) {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const canvasRef = useRef(null);
@@ -51,11 +51,27 @@ export default function Dictate() {
   };
 
   /* ---------------- STOP RECORDING ---------------- */
-  const stopRecording = () => {
-    isRecordingRef.current = false;
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
+ const stopRecording = () => {
+  isRecordingRef.current = false;
+
+  mediaRecorderRef.current.onstop = () => {
+    const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+    const url = URL.createObjectURL(blob);
+
+    onSaveDictation(prev => [
+      {
+        id: Date.now(),
+        createdAt: new Date().toLocaleString(),
+        blob,
+        url
+      },
+      ...prev
+    ]);
   };
+
+  mediaRecorderRef.current.stop();
+  setRecording(false);
+};
 
   /* ---------------- WAVEFORM ---------------- */
   const drawWaveform = () => {

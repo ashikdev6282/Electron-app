@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain , Menu } = require("electron");
 const path = require("path");
 
 let mainWindow;
@@ -54,6 +54,8 @@ function createFloatingWindow() {
     floatingWindow.show();
   });
 }
+
+Menu.setApplicationMenu(null);
 
 app.whenReady().then(() => {
   createMainWindow();

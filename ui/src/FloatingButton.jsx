@@ -5,32 +5,28 @@ export default function FloatingButton() {
         width: "100%",
         height: "100%",
         borderRadius: "50%",
-        background: "#4f46e5",
+        background: "linear-gradient(135deg, #4f46e5, #6366f1)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
 
-        WebkitAppRegion: "drag",   // 🔥 DRAG AREA
+        WebkitAppRegion: "drag",
         userSelect: "none"
       }}
     >
-      <button
+      {/* Clickable center */}
+      <div
         onClick={() => window.electronAPI.openMainWindow()}
         style={{
-          width: 36,
-          height: 36,
+          width: 28,
+          height: 28,
           borderRadius: "50%",
-          background: "transparent",
-          border: "none",
-          color: "#fff",
-          fontSize: 22,
+          background: "white",
           cursor: "pointer",
 
-          WebkitAppRegion: "no-drag" // 🔥 CLICK AREA
+          WebkitAppRegion: "no-drag"
         }}
-      >
-        🎙
-      </button>
+      />
     </div>
   );
 }

@@ -1,15 +1,15 @@
-/* Remove all default browser behavior */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@import "tailwindcss";
 
+/* GLOBAL ROOT SETUP */
 html,
 body,
 #root {
   width: 100%;
   height: 100%;
-  overflow: hidden;   /* 🔥 NO SCROLLBARS */
-  background: transparent;
+}
+
+/* 🔥 FLOATING WINDOW ONLY */
+body.floating,
+body.floating #root {
+  background: transparent !important;
 }

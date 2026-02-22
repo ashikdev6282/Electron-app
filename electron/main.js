@@ -19,6 +19,7 @@ function createMainWindow() {
   });
 
   mainWindow.loadURL("http://localhost:5173");
+  mainWindow.setMenu(null);
 
   // 🔥 IMPORTANT: hide instead of quit
   mainWindow.on("close", (e) => {

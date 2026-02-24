@@ -1,12 +1,12 @@
-const { app, BrowserWindow, ipcMain , Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog, desktopCapturer } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { dialog } = require("electron");
-const { desktopCapturer } = require("electron");
 
-let mainWindow;
-let floatingWindow;
+let mainWindow = null;
+let floatingWindow = null;
+const isDev = !app.isPackaged;
 
+/* ---------------- MAIN WINDOW ---------------- */
 function createMainWindow() {
   if (mainWindow) return;
 
@@ -21,21 +21,29 @@ function createMainWindow() {
     }
   });
 
-  mainWindow.loadURL("http://localhost:5173");
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:5173");
+  } else {
+    mainWindow.loadFile(
+      path.join(__dirname, "../ui/dist/index.html")
+    );
+  }
+
   mainWindow.setMenu(null);
 
-  // 🔥 IMPORTANT: hide instead of quit
+  // Hide instead of closing app
   mainWindow.on("close", (e) => {
     e.preventDefault();
     mainWindow.hide();
 
-    // show floating button again
     if (floatingWindow) {
       floatingWindow.show();
       floatingWindow.setAlwaysOnTop(true);
     }
   });
 }
+
+/* ---------------- FLOATING RECORDER ---------------- */
 function createFloatingWindow() {
   floatingWindow = new BrowserWindow({
     width: 260,
@@ -53,7 +61,14 @@ function createFloatingWindow() {
     }
   });
 
-  floatingWindow.loadURL("http://localhost:5173/#/recorder");
+  if (isDev) {
+    floatingWindow.loadURL("http://localhost:5173/#/recorder");
+  } else {
+    floatingWindow.loadFile(
+      path.join(__dirname, "../ui/dist/index.html"),
+      { hash: "recorder" }
+    );
+  }
 
   floatingWindow.once("ready-to-show", () => {
     floatingWindow.show();
@@ -61,11 +76,21 @@ function createFloatingWindow() {
   });
 }
 
+/* ---------------- APP READY ---------------- */
 Menu.setApplicationMenu(null);
 
 app.whenReady().then(() => {
   createMainWindow();
   createFloatingWindow();
+});
+
+/* ---------------- IPC ---------------- */
+ipcMain.on("open-main-window", () => {
+  if (floatingWindow) floatingWindow.hide();
+  if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
 });
 
 ipcMain.on("save-audio", async (event, buffer) => {
@@ -84,23 +109,10 @@ ipcMain.handle("get-system-audio", async () => {
     fetchWindowIcons: false
   });
 
-  return sources[0].id; // first screen
+  return sources[0]?.id;
 });
 
-
-ipcMain.on("open-main-window", () => {
-  console.log("FLOATING CLICKED");
-
-  // hide floating
-  if (floatingWindow) {
-    floatingWindow.hide();
-  }
-
-  // show main app
-  mainWindow.show();
-  mainWindow.focus();
-});
-
+/* ---------------- KEEP APP ALIVE ---------------- */
 app.on("window-all-closed", (e) => {
-  e.preventDefault(); // keep app alive
+  e.preventDefault();
 });

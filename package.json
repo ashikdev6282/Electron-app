@@ -2,18 +2,40 @@
   "name": "electron-react-sample",
   "version": "1.0.0",
   "main": "electron/main.js",
-  "scripts": {
-    "dev": "concurrently \"npm run dev --prefix ui\" \"electron .\""
-  },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix ui\" \"electron .\"",
+    "build:ui": "npm run build --prefix ui",
+    "build": "npm run build:ui && electron-builder"
+  },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "electron": "^40.6.0"
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1"
   },
   "dependencies": {
     "lucide-react": "^0.575.0"
+  },
+  "build": {
+    "appId": "com.client.floatingaudiorecorder",
+    "productName": "Floating Audio Recorder",
+    "files": [
+      "electron/**/*",
+      "ui/dist/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

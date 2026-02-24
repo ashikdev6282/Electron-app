@@ -1,7 +1,7 @@
 export default function MyDictations({ dictations }) {
   return (
     <div className="h-full bg-black flex justify-center pt-8 text-white">
-      <div className="w-full max-w-[420px] px-4">
+      <div className="w-full max-w-105 px-4">
 
         <h1 className="text-2xl font-semibold mb-6">
           My Dictations

@@ -38,13 +38,14 @@ function createMainWindow() {
 }
 function createFloatingWindow() {
   floatingWindow = new BrowserWindow({
-    width: 60,
-    height: 60,
+    width: 260,
+    height: 64,
     frame: false,
-    alwaysOnTop: true,
     transparent: true,
+    alwaysOnTop: true,
     skipTaskbar: true,
-    hasShadow: false,
+    resizable: false,
+    hasShadow: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -52,10 +53,11 @@ function createFloatingWindow() {
     }
   });
 
-  floatingWindow.loadURL("http://localhost:5173/#/floating");
+  floatingWindow.loadURL("http://localhost:5173/#/recorder");
 
   floatingWindow.once("ready-to-show", () => {
     floatingWindow.show();
+    floatingWindow.setAlwaysOnTop(true, "screen-saver");
   });
 }
 

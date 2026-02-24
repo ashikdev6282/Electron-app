@@ -1,18 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import FloatingButton from "./FloatingButton";
+import FloatingRecorder from "./components/FloatingRecorder";
 import "./main.css";
 
-const isFloating = window.location.hash === "#/floating";
+const isRecorder = window.location.hash === "#/recorder";
 
-// 🔥 ALWAYS RESET FIRST
 document.body.classList.remove("floating");
-
-if (isFloating) {
-  document.body.classList.add("floating");
-}
+if (isRecorder) document.body.classList.add("floating");
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  isFloating ? <FloatingButton /> : <App />
+  isRecorder ? <FloatingRecorder /> : <App />
 );

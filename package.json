@@ -21,6 +21,7 @@
   "build": {
     "appId": "com.client.floatingaudiorecorder",
     "productName": "Floating Audio Recorder",
+    "forceCodeSigning": false,
     "files": [
       "electron/**/*",
       "ui/dist/**/*",
@@ -31,8 +32,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico",
-      "sign": false
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,

@@ -1,6 +1,15 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog, desktopCapturer } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
+const { desktopCapturer } = require("electron");
 const path = require("path");
 const fs = require("fs");
+
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED PROMISE:", reason);
+});
 
 let mainWindow = null;
 let floatingWindow = null;
@@ -24,26 +33,19 @@ function createMainWindow() {
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173");
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, "../ui/dist/index.html")
-    );
+    mainWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"));
   }
 
   mainWindow.setMenu(null);
 
-  // Hide instead of closing app
   mainWindow.on("close", (e) => {
     e.preventDefault();
     mainWindow.hide();
-
-    if (floatingWindow) {
-      floatingWindow.show();
-      floatingWindow.setAlwaysOnTop(true);
-    }
+    floatingWindow?.show();
   });
 }
 
-/* ---------------- FLOATING RECORDER ---------------- */
+/* ---------------- FLOATING WINDOW ---------------- */
 function createFloatingWindow() {
   floatingWindow = new BrowserWindow({
     width: 260,
@@ -76,9 +78,9 @@ function createFloatingWindow() {
   });
 }
 
-/* ---------------- APP READY ---------------- */
 Menu.setApplicationMenu(null);
 
+/* ---------------- APP READY ---------------- */
 app.whenReady().then(() => {
   createMainWindow();
   createFloatingWindow();
@@ -86,11 +88,9 @@ app.whenReady().then(() => {
 
 /* ---------------- IPC ---------------- */
 ipcMain.on("open-main-window", () => {
-  if (floatingWindow) floatingWindow.hide();
-  if (mainWindow) {
-    mainWindow.show();
-    mainWindow.focus();
-  }
+  floatingWindow?.hide();
+  mainWindow?.show();
+  mainWindow?.focus();
 });
 
 ipcMain.on("save-audio", async (event, buffer) => {

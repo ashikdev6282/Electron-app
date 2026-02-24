@@ -10,8 +10,8 @@ export default function FloatingRecorder() {
   /* 🎙 START */
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
     const recorder = new MediaRecorder(stream);
+
     recorderRef.current = recorder;
     chunksRef.current = [];
 
@@ -22,7 +22,7 @@ export default function FloatingRecorder() {
     setPaused(false);
   };
 
-  /* ⏸ PAUSE / ▶ RESUME */
+  /* ⏸ / ▶ */
   const togglePause = () => {
     if (!recorderRef.current) return;
 
@@ -35,63 +35,88 @@ export default function FloatingRecorder() {
     }
   };
 
-  /* ⏹ STOP */
+  /* ⏹ */
   const stopRecording = () => {
     recorderRef.current?.stop();
     setRecording(false);
     setPaused(false);
   };
 
-  /* 📤 SEND */
+  /* 📤 */
   const sendRecording = async () => {
     stopRecording();
-
     const blob = new Blob(chunksRef.current, { type: "audio/webm" });
 
-    const formData = new FormData();
-    formData.append("audio", blob);
-
-    await fetch("https://your-backend-api/upload", {
-      method: "POST",
-      body: formData
-    });
+    // send to backend later
+    console.log("Recorded blob:", blob);
   };
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 rounded-full bg-[#111] text-white shadow-xl"
-      style={{ WebkitAppRegion: "drag" }}
+      style={{
+        width: "100%",
+        height: "64px",
+        background: "#111",
+        borderRadius: "32px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-around",
+        WebkitAppRegion: "drag", // 🔥 draggable area
+      }}
     >
       {/* RECORD */}
-      <button
+      <IconButton
         onClick={recording ? stopRecording : startRecording}
-        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-          recording ? "bg-zinc-600" : "bg-red-500"
-        }`}
-        style={{ WebkitAppRegion: "no-drag" }}
+        bg={recording ? "#555" : "#ef4444"}
       >
         <Mic size={18} />
-      </button>
+      </IconButton>
 
       {/* PAUSE */}
-      <button
+      <IconButton
         onClick={togglePause}
         disabled={!recording}
-        className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center disabled:opacity-40"
-        style={{ WebkitAppRegion: "no-drag" }}
+        bg="#3f3f46"
       >
         {paused ? <Play size={18} /> : <Pause size={18} />}
-      </button>
+      </IconButton>
 
       {/* SEND */}
-      <button
+      <IconButton
         onClick={sendRecording}
         disabled={!recording}
-        className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center disabled:opacity-40"
-        style={{ WebkitAppRegion: "no-drag" }}
+        bg="#4f46e5"
       >
         <Send size={18} />
-      </button>
+      </IconButton>
     </div>
+  );
+}
+
+/* ---------------- BUTTON ---------------- */
+
+function IconButton({ children, onClick, bg, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        border: "none",
+        background: bg,
+        color: "white",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+
+        WebkitAppRegion: "no-drag", // 🔥 clickable
+      }}
+    >
+      {children}
+    </button>
   );
 }

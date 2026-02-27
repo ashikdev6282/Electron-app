@@ -50,6 +50,7 @@ function createFloatingWindow() {
     alwaysOnTop: true,
     skipTaskbar: false,            // 🔥 FIX: visible in taskbar
     resizable: false,
+    movable: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

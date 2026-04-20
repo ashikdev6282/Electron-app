@@ -68,10 +68,11 @@ export default function FloatingRecorder() {
     style={{
       fontSize: 10,
       color: "#aaa",
-      maxWidth: 70,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
+      maxWidth: 80,
+      textAlign: "center",
+      whiteSpace: "normal",
+      wordBreak: "break-word",
+      lineHeight: "12px",
     }}
   >
     {username}

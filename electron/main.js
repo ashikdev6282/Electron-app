@@ -44,6 +44,9 @@ function createMainWindow() {
     screen.getCursorScreenPoint(),
   ).workAreaSize;
 
+  const winWidth = 400;
+  const winHeight = 700;
+
   const MARGIN_RIGHT = 20;
   const MARGIN_BOTTOM = 60;
   
@@ -107,6 +110,9 @@ function createFloatingWindow() {
   const { width, height } = screen.getDisplayNearestPoint(
     screen.getCursorScreenPoint(),
   ).workAreaSize;
+
+  const floatWidth = 230;
+  const floatHeight = 70;
 
   const MARGIN_RIGHT = 20;
   const MARGIN_BOTTOM = 80;

@@ -106,7 +106,7 @@ function createFloatingWindow() {
   .getDisplayNearestPoint(screen.getCursorScreenPoint())
   .workAreaSize;
 
-  const floatWidth = 200;
+  const floatWidth = 240;
   const floatHeight = 70;
 
   floatingWindow = new BrowserWindow({

@@ -4,6 +4,7 @@ import useRecorderSync from "../hooks/useRecorderSync";
 
 export default function FloatingRecorder() {
   const { isRecording, isPaused, seconds } = useRecorderSync();
+  const username = localStorage.getItem("username") || "Unknown";
 
   const [chunksRef] = useState([]); // optional for future audio
 
@@ -51,21 +52,50 @@ export default function FloatingRecorder() {
         WebkitAppRegion: "drag",
       }}
     >
-      {/* TIMER */}
+      {/* USERNAME */}
       <div
         style={{
-          width: 50,
-          textAlign: "center",
+          fontSize: 11,
+          color: "#aaa",
+          maxWidth: 80,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {username}
+      </div>
+      {/* TIMER + 🔴 INDICATOR */}
+      <div
+        style={{
+          width: 70,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
           fontSize: 13,
           opacity: isRecording ? 1 : 0.5,
         }}
       >
+        {/* 🔴 RECORDING DOT */}
+        {isRecording && (
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "#ef4444",
+              boxShadow: "0 0 6px #ef4444",
+              animation: "pulse 1s infinite",
+            }}
+          />
+        )}
+
         {formatTime()}
       </div>
 
       {/* CONTROLS */}
       <div style={{ display: "flex", gap: 10 }}>
-        
         {/* RECORD */}
         <IconButton
           onClick={handleRecord}

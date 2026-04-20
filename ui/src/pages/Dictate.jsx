@@ -6,6 +6,7 @@ import LiveWave from "../components/LiveWave";
 
 export default function Dictate() {
   const { isRecording, seconds } = useRecorderSync();
+  const username = localStorage.getItem("username") || "Unknown";
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -89,16 +90,19 @@ export default function Dictate() {
 
   return (
     <div className="h-screen bg-black text-white flex flex-col justify-between px-5 py-6">
-      
       {/* HEADER */}
       <div className="text-center">
-        <h1
-          className={`text-2xl font-semibold ${
-            isRecording ? "text-red-500" : "text-white"
-          }`}
-        >
-          {isRecording ? "Recording" : "Dictate"}
-        </h1>
+        <div className="text-center">
+          <p className="text-sm text-gray-400">{username}</p>
+
+          <h1
+            className={`text-2xl font-semibold ${
+              isRecording ? "text-red-500" : ""
+            }`}
+          >
+            {isRecording ? "Recording" : "Dictate"}
+          </h1>
+        </div>
 
         <p className="text-5xl mt-5 tracking-widest font-semibold">
           {formatTime()}
@@ -107,7 +111,6 @@ export default function Dictate() {
 
       {/* 🌊 WAVE */}
       <div className="h-36 bg-[#0f0f0f] rounded-2xl relative overflow-hidden">
-        
         {/* 🔴 CENTER LINE */}
         <div className="absolute left-1/2 top-0 w-0.5 h-full bg-red-500 -translate-x-1/2 z-10" />
 
@@ -141,7 +144,6 @@ export default function Dictate() {
 
       {/* 🎙 RECORD + ACTION */}
       <div className="bg-[#0f0f0f] rounded-2xl py-6 flex flex-col items-center gap-5">
-        
         {/* RECORD BUTTON */}
         <button
           onClick={handleRecord}
@@ -225,9 +227,7 @@ export default function Dictate() {
           {isRecording ? "Recording..." : "New Dictation"}
         </p>
 
-        <p className="text-gray-500 text-sm">
-          {new Date().toLocaleString()}
-        </p>
+        <p className="text-gray-500 text-sm">{new Date().toLocaleString()}</p>
       </div>
     </div>
   );

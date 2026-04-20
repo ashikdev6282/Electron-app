@@ -1,15 +1,43 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import FloatingRecorder from "./components/FloatingRecorder.jsx";
+import Login from "./pages/Login";
+import Dictate from "./pages/Dictate";
+import FloatingRecorder from "./pages/FloatingRecorder";
 import "./main.css";
 
-// 🔥 FIX: match Electron hash
-const isRecorder = window.location.hash === "#recorder";
+function Root() {
+  const [hash, setHash] = useState(window.location.hash || "#login");
 
-document.body.classList.remove("floating");
-if (isRecorder) document.body.classList.add("floating");
+  /* 🔥 HANDLE HASH CHANGE */
+  useEffect(() => {
+    const handleHashChange = () => {
+      setHash(window.location.hash || "#login");
+    };
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  isRecorder ? <FloatingRecorder /> : <App />
-);
+    window.addEventListener("hashchange", handleHashChange);
+
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+  }, []);
+
+  /* 🔥 APPLY FLOATING CLASS SAFELY */
+  useEffect(() => {
+    document.body.classList.toggle("floating", hash === "#mini");
+  }, [hash]);
+
+  /* 🔥 ROUTING */
+  let Component;
+
+  if (hash === "#mini") {
+    Component = FloatingRecorder;
+  } else if (hash === "#dictate") {
+    Component = Dictate;
+  } else {
+    Component = Login;
+  }
+
+  return <Component />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);

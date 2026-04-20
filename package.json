@@ -22,6 +22,8 @@
     "appId": "com.client.floatingaudiorecorder",
     "productName": "Floating Audio Recorder",
     "forceCodeSigning": false,
+    "compression": "maximum",
+    "asar": true,
     "files": [
       "electron/**/*",
       "ui/dist/**/*",

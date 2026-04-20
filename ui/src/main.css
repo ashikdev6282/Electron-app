@@ -13,3 +13,16 @@ body.floating,
 body.floating #root {
   background: transparent !important;
 }
+
+/* 🔥 FIX FLOATING MODE */
+body.floating {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* ❌ remove scroll */
+  background: transparent;
+}
+
+/* remove default spacing */
+html, body, #root {
+  height: 100%;
+}

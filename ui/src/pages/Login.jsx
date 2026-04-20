@@ -14,7 +14,8 @@ export default function Login() {
       return;
     }
 
-    window.location.hash = "#dictate";
+    localStorage.setItem("username", email);
+    window.electronAPI.startRecorder();
   };
 
   return (

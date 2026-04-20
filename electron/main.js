@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog, desktopCapturer } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog, desktopCapturer, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -32,9 +32,18 @@ function broadcastRecorderState() {
 function createMainWindow() {
   if (mainWindow) return;
 
+  const { width, height } = screen
+  .getDisplayNearestPoint(screen.getCursorScreenPoint())
+  .workAreaSize;
+
+  const winWidth = 400;
+  const winHeight = 700;
+
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 700,
+    width: winWidth,
+    height: winHeight,
+    x: width - winWidth - 20,
+    y: height - winHeight - 20,
     minWidth: 350,
     minHeight: 600,
     show: false,
@@ -93,9 +102,19 @@ function createMainWindow() {
 function createFloatingWindow() {
   if (floatingWindow) return;
 
+   const { width, height } = screen
+  .getDisplayNearestPoint(screen.getCursorScreenPoint())
+  .workAreaSize;
+
+  const floatWidth = 200;
+  const floatHeight = 70;
+
   floatingWindow = new BrowserWindow({
-    width: 200,
-    height: 70,
+    
+    width: floatWidth,
+    height: floatHeight,
+    x: width - floatWidth - 20,
+    y: height - floatHeight - 20,
     frame: false,
     backgroundColor: "#111111",
     alwaysOnTop: true,
@@ -159,6 +178,17 @@ ipcMain.on("open-main-window", () => {
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();
+
+    // 🔥 IMPORTANT FIX: navigate to dictate page
+    if (isDev) {
+      mainWindow.loadURL("http://localhost:5173#dictate");
+    } else {
+      mainWindow.loadFile(
+        path.join(__dirname, "../ui/dist/index.html"),
+        { hash: "dictate" }
+      );
+    }
+
     mainWindow.webContents.send("recorder:update", recorderState);
   }
 });

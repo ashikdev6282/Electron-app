@@ -1,10 +1,10 @@
 {
   "name": "electron-react-sample",
   "version": "1.0.0",
+  "description": "Medrec-Q Dictate Desktop Application",
   "main": "electron/main.js",
   "author": "",
   "license": "ISC",
-  "description": "",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix ui\" \"electron .\"",
     "build:ui": "npm run build --prefix ui",

@@ -19,8 +19,8 @@
     "lucide-react": "^0.575.0"
   },
   "build": {
-    "appId": "com.client.floatingaudiorecorder",
-    "productName": "Floating Audio Recorder",
+    "appId": "com.medrec.dictate",
+    "productName": "Medrec-Q Dictate",
     "forceCodeSigning": false,
     "compression": "maximum",
     "asar": true,
@@ -34,7 +34,7 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "electron/assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,

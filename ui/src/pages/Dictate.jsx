@@ -89,7 +89,7 @@ export default function Dictate() {
   };
 
   return (
-    <div className="h-screen bg-black text-white flex flex-col justify-between px-5 py-6">
+    <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">
       {/* HEADER */}
       <div className="text-center">
         <div className="text-center">
@@ -110,7 +110,7 @@ export default function Dictate() {
       </div>
 
       {/* 🌊 WAVE */}
-      <div className="h-36 bg-[#0f0f0f] rounded-2xl relative overflow-hidden">
+      <div className="h-40 min-h-40 bg-[#111] rounded-2xl relative overflow-hidden">
         {/* 🔴 CENTER LINE */}
         <div className="absolute left-1/2 top-0 w-0.5 h-full bg-red-500 -translate-x-1/2 z-10" />
 
@@ -128,22 +128,22 @@ export default function Dictate() {
       </div>
 
       {/* ▶ PLAYBACK */}
-      <div className="bg-[#0f0f0f] rounded-2xl py-4 flex justify-around items-center">
-        <SkipBack className="text-gray-600" />
+      <div className="h-30 bg-[#111] rounded-2xl flex items-center justify-around px-6">
+        <SkipBack className="text-gray-600 w-6 h-6" />
 
         <button
           onClick={handlePlayPause}
           disabled={!audioUrl}
-          className="w-11 h-11 border border-gray-600 rounded-full flex items-center justify-center active:scale-90 transition disabled:opacity-30"
+          className="w-12 h-12 border border-gray-600 rounded-full flex items-center justify-center active:scale-90 transition disabled:opacity-30"
         >
           {isPlaying ? <Pause size={20} /> : <Play size={20} />}
         </button>
 
-        <SkipForward className="text-gray-600" />
+        <SkipForward className="text-gray-600 w-6 h-6" />
       </div>
 
       {/* 🎙 RECORD + ACTION */}
-      <div className="bg-[#0f0f0f] rounded-2xl py-6 flex flex-col items-center gap-5">
+      <div className="h-40 bg-[#111] rounded-2xl flex flex-col items-center justify-center">
         {/* RECORD BUTTON */}
         <button
           onClick={handleRecord}

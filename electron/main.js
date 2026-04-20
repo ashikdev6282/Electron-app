@@ -40,6 +40,7 @@ function createMainWindow() {
   const winHeight = 700;
 
   mainWindow = new BrowserWindow({
+    title: "Medrec-Q Dictate",
     width: winWidth,
     height: winHeight,
     x: width - winWidth - 20,
@@ -50,6 +51,7 @@ function createMainWindow() {
     backgroundColor: "#0f0f0f",
     resizable: true,
     webPreferences: {
+      icon: path.join(__dirname, "assets/icon.ico"),
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -111,6 +113,7 @@ function createFloatingWindow() {
 
   floatingWindow = new BrowserWindow({
     
+    title: "Medrec-Q Dictate",
     width: floatWidth,
     height: floatHeight,
     x: width - floatWidth - 20,
@@ -122,6 +125,7 @@ function createFloatingWindow() {
     movable: true,
     skipTaskbar: false,
     webPreferences: {
+      icon : path.join(__dirname, "assets/icon.ico"),
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,

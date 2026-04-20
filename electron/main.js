@@ -1,4 +1,12 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog, desktopCapturer, screen } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  dialog,
+  desktopCapturer,
+  screen,
+} = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -32,19 +40,20 @@ function broadcastRecorderState() {
 function createMainWindow() {
   if (mainWindow) return;
 
-  const { width, height } = screen
-  .getDisplayNearestPoint(screen.getCursorScreenPoint())
-  .workAreaSize;
+  const { width, height } = screen.getDisplayNearestPoint(
+    screen.getCursorScreenPoint(),
+  ).workAreaSize;
 
-  const winWidth = 400;
-  const winHeight = 700;
+  const MARGIN_RIGHT = 20;
+  const MARGIN_BOTTOM = 60;
+  
 
   mainWindow = new BrowserWindow({
     title: "Medrec-Q Dictate",
     width: winWidth,
     height: winHeight,
-    x: width - winWidth - 20,
-    y: height - winHeight - 20,
+    x: width - winWidth - MARGIN_RIGHT,
+    y: height - winHeight - MARGIN_BOTTOM,
     minWidth: 350,
     minHeight: 600,
     show: false,
@@ -85,18 +94,9 @@ function createMainWindow() {
   });
 
   /* 🔥 CLOSE → FLOATING */
-  mainWindow.on("close", (e) => {
-    if (!app.isQuiting) {
-      e.preventDefault();
-      mainWindow.hide();
-
-      if (!floatingWindow) createFloatingWindow();
-
-      floatingWindow.show();
-      floatingWindow.focus();
-
-      floatingWindow.webContents.send("recorder:update", recorderState);
-    }
+  mainWindow.on("close", () => {
+    app.isQuiting = true;
+    app.quit(); // 🔥 fully close app
   });
 }
 
@@ -104,20 +104,19 @@ function createMainWindow() {
 function createFloatingWindow() {
   if (floatingWindow) return;
 
-   const { width, height } = screen
-  .getDisplayNearestPoint(screen.getCursorScreenPoint())
-  .workAreaSize;
+  const { width, height } = screen.getDisplayNearestPoint(
+    screen.getCursorScreenPoint(),
+  ).workAreaSize;
 
-  const floatWidth = 230;
-  const floatHeight = 70;
+  const MARGIN_RIGHT = 20;
+  const MARGIN_BOTTOM = 80;
 
   floatingWindow = new BrowserWindow({
-    
     title: "Medrec-Q Dictate",
     width: floatWidth,
     height: floatHeight,
-    x: width - floatWidth - 20,
-    y: height - floatHeight - 20,
+    x: width - floatWidth - MARGIN_RIGHT,
+    y: height - floatHeight - MARGIN_BOTTOM,
     frame: false,
     backgroundColor: "#111111",
     alwaysOnTop: true,
@@ -125,7 +124,7 @@ function createFloatingWindow() {
     movable: true,
     skipTaskbar: false,
     webPreferences: {
-      icon : path.join(__dirname, "assets/icon.ico"),
+      icon: path.join(__dirname, "assets/icon.ico"),
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -135,10 +134,9 @@ function createFloatingWindow() {
   if (isDev) {
     floatingWindow.loadURL("http://localhost:5173#mini");
   } else {
-    floatingWindow.loadFile(
-      path.join(__dirname, "../ui/dist/index.html"),
-      { hash: "mini" }
-    );
+    floatingWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
+      hash: "mini",
+    });
   }
 
   floatingWindow.once("ready-to-show", () => {
@@ -187,10 +185,9 @@ ipcMain.on("open-main-window", () => {
     if (isDev) {
       mainWindow.loadURL("http://localhost:5173#dictate");
     } else {
-      mainWindow.loadFile(
-        path.join(__dirname, "../ui/dist/index.html"),
-        { hash: "dictate" }
-      );
+      mainWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
+        hash: "dictate",
+      });
     }
 
     mainWindow.webContents.send("recorder:update", recorderState);

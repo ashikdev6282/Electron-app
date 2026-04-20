@@ -52,47 +52,57 @@ export default function FloatingRecorder() {
         WebkitAppRegion: "drag",
       }}
     >
-      {/* USERNAME */}
-      <div
-        style={{
-          fontSize: 11,
-          color: "#aaa",
-          maxWidth: 80,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {username}
-      </div>
-      {/* TIMER + 🔴 INDICATOR */}
-      <div
-        style={{
-          width: 70,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-          fontSize: 13,
-          opacity: isRecording ? 1 : 0.5,
-        }}
-      >
-        {/* 🔴 RECORDING DOT */}
-        {isRecording && (
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#ef4444",
-              boxShadow: "0 0 6px #ef4444",
-              animation: "pulse 1s infinite",
-            }}
-          />
-        )}
+      {/* USERNAME + TIMER */}
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 70,
+  }}
+>
+  {/* USERNAME */}
+  <div
+    title={username} // 👈 tooltip (important)
+    style={{
+      fontSize: 10,
+      color: "#aaa",
+      maxWidth: 70,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {username}
+  </div>
 
-        {formatTime()}
-      </div>
+  {/* TIMER + 🔴 DOT */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 5,
+      fontSize: 13,
+      opacity: isRecording ? 1 : 0.5,
+    }}
+  >
+    {isRecording && (
+      <div
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: "#ef4444",
+          boxShadow: "0 0 4px #ef4444",
+          animation: "pulse 1s infinite",
+        }}
+      />
+    )}
+
+    {formatTime()}
+  </div>
+</div>
 
       {/* CONTROLS */}
       <div style={{ display: "flex", gap: 10 }}>

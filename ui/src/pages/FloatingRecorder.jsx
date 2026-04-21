@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Mic, Square, Pause, Play, Send, Maximize2 } from "lucide-react";
+import { Mic, Square, Send, Maximize2 } from "lucide-react";
 import useRecorderSync from "../hooks/useRecorderSync";
 
 export default function FloatingRecorder() {
-  const { isRecording, isPaused, seconds } = useRecorderSync();
+  const { isRecording, seconds } = useRecorderSync();
   const username = localStorage.getItem("username") || "Unknown";
 
-  const [chunksRef] = useState([]); // optional for future audio
+  const [chunksRef] = useState([]); // optional
 
   const formatTime = () => {
     const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -23,17 +23,13 @@ export default function FloatingRecorder() {
     }
   };
 
-  /* ⏸ PAUSE / RESUME */
-  const handlePause = () => {
-    if (isPaused) {
-      window.electronAPI.recorderResume();
-    } else {
-      window.electronAPI.recorderPause();
-    }
-  };
-
-  /* 📤 SEND (only reset for now) */
+  /* 📤 SEND (always enabled) */
   const handleSend = () => {
+    if (seconds === 0) {
+      console.log("No recording yet");
+      return;
+    }
+
     window.electronAPI.recorderReset();
   };
 
@@ -53,61 +49,70 @@ export default function FloatingRecorder() {
       }}
     >
       {/* USERNAME + TIMER */}
-<div
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 70,
-  }}
->
-  {/* USERNAME */}
-  <div
-    title={username} // 👈 tooltip (important)
-    style={{
-      fontSize: 10,
-      color: "#aaa",
-      maxWidth: 80,
-      textAlign: "center",
-      whiteSpace: "normal",
-      wordBreak: "break-word",
-      lineHeight: "12px",
-    }}
-  >
-    {username}
-  </div>
-
-  {/* TIMER + 🔴 DOT */}
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 5,
-      fontSize: 13,
-      opacity: isRecording ? 1 : 0.5,
-    }}
-  >
-    {isRecording && (
       <div
         style={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          background: "#ef4444",
-          boxShadow: "0 0 4px #ef4444",
-          animation: "pulse 1s infinite",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minWidth: 80,
         }}
-      />
-    )}
+      >
+        {/* USERNAME */}
+        <div
+          title={username}
+          style={{
+            fontSize: 10,
+            color: "#aaa",
+            maxWidth: 80,
+            textAlign: "center",
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            lineHeight: "12px",
+          }}
+        >
+          {username}
+        </div>
 
-    {formatTime()}
-  </div>
-</div>
+        {/* TIMER + RECORDING STATUS */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+            opacity: isRecording ? 1 : 0.5,
+          }}
+        >
+          {isRecording && (
+            <>
+              {/* 🔴 DOT */}
+              <div
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#ef4444",
+                  boxShadow: "0 0 4px #ef4444",
+                  animation: "pulse 1s infinite",
+                }}
+              />
+
+              {/* TEXT */}
+              <span style={{ color: "#ef4444", fontSize: 11 }}>
+                REC
+              </span>
+            </>
+          )}
+
+          {/* TIME */}
+          <span>{formatTime()}</span>
+        </div>
+      </div>
 
       {/* CONTROLS */}
       <div style={{ display: "flex", gap: 10 }}>
-        {/* RECORD */}
+        {/* RECORD / STOP */}
         <IconButton
           onClick={handleRecord}
           bg={isRecording ? "#dc2626" : "#ef4444"}
@@ -115,12 +120,8 @@ export default function FloatingRecorder() {
           {isRecording ? <Square size={14} /> : <Mic size={14} />}
         </IconButton>
 
-        {/* SEND */}
-        <IconButton
-          onClick={handleSend}
-          disabled={!isRecording && seconds === 0}
-          bg="#4f46e5"
-        >
+        {/* SEND (always active) */}
+        <IconButton onClick={handleSend} bg="#4f46e5">
           <Send size={14} />
         </IconButton>
       </div>
@@ -136,12 +137,12 @@ export default function FloatingRecorder() {
   );
 }
 
-/* BUTTON */
-function IconButton({ children, onClick, bg, disabled }) {
+/* ---------------- BUTTON ---------------- */
+
+function IconButton({ children, onClick, bg }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
       style={{
         width: 32,
         height: 32,
@@ -152,9 +153,9 @@ function IconButton({ children, onClick, bg, disabled }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        cursor: disabled ? "default" : "pointer",
-        opacity: disabled ? 0.4 : 1,
+        cursor: "pointer",
         WebkitAppRegion: "no-drag",
+        transition: "0.2s",
       }}
     >
       {children}

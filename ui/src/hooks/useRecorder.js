@@ -6,6 +6,7 @@ export default function useRecorder() {
   const allChunksRef = useRef([]); // 🔥 store multiple recordings
   const audioRef = useRef(null);
   const streamRef = useRef(null);
+  const audioContextRef = useRef(null); // 🔥 for cleanup
 
   const [isRecording, setIsRecording] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
@@ -13,10 +14,61 @@ export default function useRecorder() {
 
   /* 🎙 START */
   const startRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        sampleRate: 48000,
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        googEchoCancellation: true,
+        googNoiseSuppression: true,
+        googAutoGainControl: true,
+        googHighpassFilter: true,
+      },
+    });
+
     streamRef.current = stream;
 
-    const recorder = new MediaRecorder(stream);
+    /* 🔥 AUDIO PROCESSING */
+    const audioContext = new AudioContext();
+    audioContextRef.current = audioContext;
+
+    const source = audioContext.createMediaStreamSource(stream);
+
+    // 🎯 HIGH PASS FILTER (remove low noise like fan/AC)
+    const highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.setValueAtTime(100, audioContext.currentTime);
+
+    // 🎯 COMPRESSOR (focus voice, reduce background)
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-45, audioContext.currentTime);
+    compressor.knee.setValueAtTime(40, audioContext.currentTime);
+    compressor.ratio.setValueAtTime(12, audioContext.currentTime);
+    compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
+    compressor.release.setValueAtTime(0.25, audioContext.currentTime);
+
+    // 🎯 GAIN (boost voice)
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(1.3, audioContext.currentTime);
+
+    // 🔗 CONNECT PIPELINE
+    source.connect(highpass);
+    highpass.connect(compressor);
+    compressor.connect(gainNode);
+
+    const destination = audioContext.createMediaStreamDestination();
+    gainNode.connect(destination);
+
+    const enhancedStream = destination.stream;
+
+    /* 🔥 MEDIA RECORDER */
+    const recorder = new MediaRecorder(enhancedStream, {
+      mimeType: "audio/webm;codecs=opus",
+      audioBitsPerSecond: 128000,
+    });
+
     mediaRecorderRef.current = recorder;
     chunksRef.current = [];
 
@@ -37,10 +89,15 @@ export default function useRecorder() {
 
       audioRef.current = new Audio(url);
 
+      // 🔥 stop mic
       streamRef.current?.getTracks().forEach((t) => t.stop());
+
+      // 🔥 cleanup audio context
+      audioContextRef.current?.close();
     };
 
-    recorder.start(200);
+    recorder.start(); // ✅ high quality continuous recording
+
     setIsRecording(true);
     setIsFinished(false);
   };

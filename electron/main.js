@@ -7,8 +7,11 @@ const {
   desktopCapturer,
   screen,
 } = require("electron");
+
 const path = require("path");
 const fs = require("fs");
+
+require("dotenv").config();
 
 let mainWindow = null;
 let floatingWindow = null;
@@ -40,30 +43,26 @@ function broadcastRecorderState() {
 function createMainWindow() {
   if (mainWindow) return;
 
-  const { width, height } = screen.getDisplayNearestPoint(
-    screen.getCursorScreenPoint(),
-  ).workAreaSize;
+  const { workArea } = screen.getPrimaryDisplay();
 
   const winWidth = 400;
   const winHeight = 700;
 
   const MARGIN_RIGHT = 20;
   const MARGIN_BOTTOM = 60;
-  
 
   mainWindow = new BrowserWindow({
     title: "Medrec-Q Dictate",
     width: winWidth,
     height: winHeight,
-    x: width - winWidth - MARGIN_RIGHT,
-    y: height - winHeight - MARGIN_BOTTOM,
+    x: workArea.x + workArea.width - winWidth - MARGIN_RIGHT,
+    y: workArea.y + workArea.height - winHeight - MARGIN_BOTTOM,
     minWidth: 350,
     minHeight: 600,
     show: false,
     backgroundColor: "#0f0f0f",
     resizable: true,
     webPreferences: {
-      icon: path.join(__dirname, "assets/icon.ico"),
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -80,10 +79,10 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
-    mainWindow.webContents.send("recorder:update", recorderState);
+    broadcastRecorderState();
   });
 
-  /* 🔥 MINIMIZE → FLOATING */
+  /* 🔽 MINIMIZE → FLOATING */
   mainWindow.on("minimize", (e) => {
     e.preventDefault();
     mainWindow.hide();
@@ -93,13 +92,13 @@ function createMainWindow() {
     floatingWindow.show();
     floatingWindow.focus();
 
-    floatingWindow.webContents.send("recorder:update", recorderState);
+    broadcastRecorderState();
   });
 
-  /* 🔥 CLOSE → FLOATING */
+  /* ❌ CLOSE → FULL EXIT */
   mainWindow.on("close", () => {
     app.isQuiting = true;
-    app.quit(); // 🔥 fully close app
+    app.quit();
   });
 }
 
@@ -107,11 +106,9 @@ function createMainWindow() {
 function createFloatingWindow() {
   if (floatingWindow) return;
 
-  const { width, height } = screen.getDisplayNearestPoint(
-    screen.getCursorScreenPoint(),
-  ).workAreaSize;
+  const { workArea } = screen.getPrimaryDisplay();
 
-  const floatWidth = 230;
+  const floatWidth = 260;
   const floatHeight = 70;
 
   const MARGIN_RIGHT = 20;
@@ -121,8 +118,8 @@ function createFloatingWindow() {
     title: "Medrec-Q Dictate",
     width: floatWidth,
     height: floatHeight,
-    x: width - floatWidth - MARGIN_RIGHT,
-    y: height - floatHeight - MARGIN_BOTTOM,
+    x: workArea.x + workArea.width - floatWidth - MARGIN_RIGHT,
+    y: workArea.y + workArea.height - floatHeight - MARGIN_BOTTOM,
     frame: false,
     backgroundColor: "#111111",
     alwaysOnTop: true,
@@ -130,7 +127,6 @@ function createFloatingWindow() {
     movable: true,
     skipTaskbar: false,
     webPreferences: {
-      icon: path.join(__dirname, "assets/icon.ico"),
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
@@ -140,21 +136,22 @@ function createFloatingWindow() {
   if (isDev) {
     floatingWindow.loadURL("http://localhost:5173#mini");
   } else {
-    floatingWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
-      hash: "mini",
-    });
+    floatingWindow.loadFile(
+      path.join(__dirname, "../ui/dist/index.html"),
+      { hash: "mini" }
+    );
   }
 
   floatingWindow.once("ready-to-show", () => {
     floatingWindow.show();
     floatingWindow.focus();
-
-    floatingWindow.webContents.send("recorder:update", recorderState);
+    broadcastRecorderState();
   });
 
-  floatingWindow.on("close", (e) => {
-    e.preventDefault();
-    floatingWindow.hide();
+  /* ❌ CLOSE → FULL EXIT */
+  floatingWindow.on("close", () => {
+    app.isQuiting = true;
+    app.quit();
   });
 
   floatingWindow.on("closed", () => {
@@ -187,16 +184,16 @@ ipcMain.on("open-main-window", () => {
     mainWindow.show();
     mainWindow.focus();
 
-    // 🔥 IMPORTANT FIX: navigate to dictate page
     if (isDev) {
       mainWindow.loadURL("http://localhost:5173#dictate");
     } else {
-      mainWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
-        hash: "dictate",
-      });
+      mainWindow.loadFile(
+        path.join(__dirname, "../ui/dist/index.html"),
+        { hash: "dictate" }
+      );
     }
 
-    mainWindow.webContents.send("recorder:update", recorderState);
+    broadcastRecorderState();
   }
 });
 
@@ -214,21 +211,45 @@ ipcMain.on("toggle-maximize", () => {
   win.isMaximized() ? win.unmaximize() : win.maximize();
 });
 
+/* ---------------- LOGIN API ---------------- */
+
+ipcMain.handle("login", async (event, credentials) => {
+  try {
+    const response = await fetch("https://www.medrecq.com/api/login.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Transaction-ID": process.env.TRANSACTION_ID,
+      },
+      body: JSON.stringify(credentials),
+    });
+
+    const text = await response.text();
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { success: false, message: "Invalid server response" };
+    }
+
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
 /* ---------------- RECORDER LOGIC ---------------- */
 
-/* 🎙 START */
 ipcMain.on("recorder:start", () => {
   recorderState.isRecording = true;
   recorderState.isPaused = false;
 
   startTime = Date.now() - recorderState.seconds * 1000;
 
-  if (timerInterval) clearInterval(timerInterval);
+  clearInterval(timerInterval);
 
   timerInterval = setInterval(() => {
     if (!recorderState.isPaused && startTime) {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      recorderState.seconds = elapsed;
+      recorderState.seconds = Math.floor((Date.now() - startTime) / 1000);
       broadcastRecorderState();
     }
   }, 200);
@@ -236,25 +257,20 @@ ipcMain.on("recorder:start", () => {
   broadcastRecorderState();
 });
 
-/* ⏹ STOP */
 ipcMain.on("recorder:stop", () => {
   recorderState.isRecording = false;
   recorderState.isPaused = false;
 
   clearInterval(timerInterval);
-
   broadcastRecorderState();
 });
 
-/* ⏸ PAUSE */
 ipcMain.on("recorder:pause", () => {
   recorderState.isPaused = true;
   pauseTime = Date.now();
-
   broadcastRecorderState();
 });
 
-/* ▶ RESUME */
 ipcMain.on("recorder:resume", () => {
   recorderState.isPaused = false;
 
@@ -265,7 +281,6 @@ ipcMain.on("recorder:resume", () => {
   broadcastRecorderState();
 });
 
-/* 🔁 RESET */
 ipcMain.on("recorder:reset", () => {
   recorderState = {
     isRecording: false,
@@ -277,7 +292,6 @@ ipcMain.on("recorder:reset", () => {
   pauseTime = null;
 
   clearInterval(timerInterval);
-
   broadcastRecorderState();
 });
 
@@ -296,7 +310,6 @@ ipcMain.on("save-audio", async (event, buffer) => {
 ipcMain.handle("get-system-audio", async () => {
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    fetchWindowIcons: false,
   });
 
   return sources[0]?.id;
@@ -304,8 +317,10 @@ ipcMain.handle("get-system-audio", async () => {
 
 /* ---------------- APP BEHAVIOR ---------------- */
 
-app.on("window-all-closed", (e) => {
-  e.preventDefault();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
 
 app.on("before-quit", () => {

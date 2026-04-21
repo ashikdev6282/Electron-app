@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.send("close-floating");
   },
 
-  /* ----------- RECORDER SYNC (🔥 IMPORTANT) ----------- */
+  /* ----------- RECORDER SYNC ----------- */
 
   recorderStart: () => ipcRenderer.send("recorder:start"),
   recorderStop: () => ipcRenderer.send("recorder:stop"),
@@ -34,19 +34,34 @@ contextBridge.exposeInMainWorld("electronAPI", {
   recorderReset: () => ipcRenderer.send("recorder:reset"),
 
   onRecorderUpdate: (callback) => {
-    ipcRenderer.removeAllListeners("recorder:update"); // 🔥 VERY IMPORTANT
+    ipcRenderer.removeAllListeners("recorder:update"); // prevent duplicate listeners
     ipcRenderer.on("recorder:update", (_, data) => {
       callback(data);
     });
   },
 
+  /* ----------- 🔐 LOGIN API (NEW) ----------- */
+
+  login: async (credentials) => {
+    try {
+      return await ipcRenderer.invoke("login", credentials);
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  },
+
   /* ----------- AUDIO ----------- */
 
   getSystemAudioStream: async () => {
-    return await ipcRenderer.invoke("get-system-audio");
+    try {
+      return await ipcRenderer.invoke("get-system-audio");
+    } catch (err) {
+      console.error("Audio stream error:", err);
+      return null;
+    }
   },
 
-  saveAudio: async (buffer) => {
+  saveAudio: (buffer) => {
     ipcRenderer.send("save-audio", buffer);
-  }
+  },
 });

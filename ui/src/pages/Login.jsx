@@ -6,16 +6,43 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setError("");
+
     if (!email || !password) {
-      setError("Please enter email and password");
+      setError("Please enter username and password");
       return;
     }
 
-    localStorage.setItem("username", email);
-    window.electronAPI.startRecorder();
+    try {
+      setLoading(true);
+
+      const res = await window.electronAPI.login({
+        username: email,
+        password: password,
+      });
+
+      if (res.success) {
+        /* ✅ SAVE USER DATA */
+        localStorage.setItem("username", res.data.username);
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("userid", res.data.userid);
+
+        /* ✅ REDIRECT TO FLOATING */
+        window.electronAPI.startRecorder();
+
+      } else {
+        setError(res.message || "Invalid credentials");
+      }
+
+    } catch (err) {
+      setError("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,7 +50,11 @@ export default function Login() {
 
       {/* LOGO */}
       <div className="mb-10 flex items-center">
-        <img src={logo} alt="Logo" className="w-50 h-14 object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.7)]" />
+        <img
+          src={logo}
+          alt="Logo"
+          className="w-50 h-14 object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.7)]"
+        />
       </div>
 
       {/* CARD */}
@@ -54,7 +85,6 @@ export default function Login() {
             className="w-full pl-10 pr-10 py-3 rounded-xl bg-[#111] border border-[#374151] text-white placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
           />
 
-          {/* 👁 TOGGLE */}
           <button
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -73,12 +103,13 @@ export default function Login() {
         {/* LOGIN BUTTON */}
         <button
           onClick={handleLogin}
+          disabled={loading}
           className="w-full py-3 rounded-xl text-white font-semibold tracking-wide
           bg-linear-to-r from-blue-600 to-blue-500
           hover:from-blue-700 hover:to-blue-600
-          transition duration-200 shadow-lg"
+          transition duration-200 shadow-lg disabled:opacity-50"
         >
-          LOGIN
+          {loading ? "Logging in..." : "LOGIN"}
         </button>
       </div>
     </div>

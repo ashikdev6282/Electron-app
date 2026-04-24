@@ -30,7 +30,13 @@ export default function FloatingRecorder() {
       return;
     }
 
-    window.electronAPI.recorderReset();
+     if (isRecording) {
+    window.electronAPI.recorderStop();
+  }
+
+  // 🚀 Open main dictate window
+  window.electronAPI.openMainWindow();
+    
   };
 
   return (

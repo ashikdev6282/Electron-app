@@ -79,6 +79,7 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
+    mainWindow.webContents.openDevTools({ mode: "detach" }); // openDevTools in separate window
     broadcastRecorderState();
   });
 
@@ -136,10 +137,9 @@ function createFloatingWindow() {
   if (isDev) {
     floatingWindow.loadURL("http://localhost:5173#mini");
   } else {
-    floatingWindow.loadFile(
-      path.join(__dirname, "../ui/dist/index.html"),
-      { hash: "mini" }
-    );
+    floatingWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
+      hash: "mini",
+    });
   }
 
   floatingWindow.once("ready-to-show", () => {
@@ -187,10 +187,9 @@ ipcMain.on("open-main-window", () => {
     if (isDev) {
       mainWindow.loadURL("http://localhost:5173#dictate");
     } else {
-      mainWindow.loadFile(
-        path.join(__dirname, "../ui/dist/index.html"),
-        { hash: "dictate" }
-      );
+      mainWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
+        hash: "dictate",
+      });
     }
 
     broadcastRecorderState();
@@ -226,13 +225,82 @@ ipcMain.handle("login", async (event, credentials) => {
 
     const text = await response.text();
 
+    let data;
+
     try {
-      return JSON.parse(text);
+      data = JSON.parse(text);
     } catch {
       return { success: false, message: "Invalid server response" };
     }
 
+    if (data.success) {
+      global.userSession = data.data; // Store user data in global variable
+    } else {
+      return { success: false, message: data.message };
+    }
+
+    return data;
   } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+/* ---------------- AUDIO API ---------------- */
+ipcMain.handle("upload-audio", async (event, payload) => {
+  try {
+    const { fileBuffer, fileName, priority, comment } = payload;
+
+    if (!global.userSession?.token) {
+      return { success: false, message: "Session expired" };
+    }
+
+    // ✅ Convert incoming data to Buffer
+    const buffer = Buffer.from(fileBuffer);
+
+    // ✅ Convert Buffer → Blob (VERY IMPORTANT)
+    const blob = new Blob([buffer], {
+      type: "audio/wav",
+    });
+
+    // ✅ Use native FormData (NO require("form-data"))
+    const form = new FormData();
+
+    const safeFileName = fileName.endsWith(".wav")
+  ? fileName
+  : fileName + ".wav";
+
+    form.append("upload_priority", priority || "normal");
+    form.append("comment", comment || "");
+    form.append("files[]", blob, safeFileName);
+
+    const response = await fetch(
+      "https://www.medrecq.com/api/upload-audio.php",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${global.userSession.token}`,
+          "X-Transaction-ID": process.env.TRANSACTION_ID,
+        },
+        body: form,
+      }
+    );
+
+    const text = await response.text();
+
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      console.error("INVALID RESPONSE:", text);
+      return { success: false, message: "Invalid server response" };
+    }
+
+    console.log("UPLOAD RESULT:", result);
+
+    return result;
+
+  } catch (error) {
+    console.error("UPLOAD ERROR:", error);
     return { success: false, message: error.message };
   }
 });
@@ -299,7 +367,7 @@ ipcMain.on("recorder:reset", () => {
 
 ipcMain.on("save-audio", async (event, buffer) => {
   const { filePath } = await dialog.showSaveDialog({
-    defaultPath: "recording.webm",
+    defaultPath: "recording.ogg",
   });
 
   if (filePath) {

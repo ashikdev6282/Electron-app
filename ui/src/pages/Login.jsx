@@ -26,18 +26,18 @@ export default function Login() {
       });
 
       if (res.success) {
-        /* ✅ SAVE USER DATA */
-        localStorage.setItem("username", res.data.username);
+        // 🔥 store full user data
+        localStorage.setItem("user", JSON.stringify(res.data));
+
+        // optional (quick access)
         localStorage.setItem("token", res.data.token);
-        localStorage.setItem("userid", res.data.userid);
+        localStorage.setItem("username", res.data.username);
 
         /* ✅ REDIRECT TO FLOATING */
         window.electronAPI.startRecorder();
-
       } else {
         setError(res.message || "Invalid credentials");
       }
-
     } catch (err) {
       setError("Something went wrong");
     } finally {
@@ -47,7 +47,6 @@ export default function Login() {
 
   return (
     <div className="h-screen bg-black flex flex-col items-center justify-center px-4">
-
       {/* LOGO */}
       <div className="mb-10 flex items-center">
         <img
@@ -59,10 +58,12 @@ export default function Login() {
 
       {/* CARD */}
       <div className="w-full max-w-sm bg-[#0f0f0f] border border-[#1f2937] rounded-2xl p-6 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
-
         {/* USERNAME */}
         <div className="relative mb-5">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <User
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
 
           <input
             type="text"
@@ -75,7 +76,10 @@ export default function Login() {
 
         {/* PASSWORD */}
         <div className="relative mb-5">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Lock
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
 
           <input
             type={showPassword ? "text" : "password"}
@@ -95,9 +99,7 @@ export default function Login() {
 
         {/* ERROR */}
         {error && (
-          <p className="text-red-500 text-sm mb-3 text-center">
-            {error}
-          </p>
+          <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
         )}
 
         {/* LOGIN BUTTON */}

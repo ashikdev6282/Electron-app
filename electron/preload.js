@@ -34,23 +34,40 @@ contextBridge.exposeInMainWorld("electronAPI", {
   recorderReset: () => ipcRenderer.send("recorder:reset"),
 
   onRecorderUpdate: (callback) => {
-    ipcRenderer.removeAllListeners("recorder:update"); // prevent duplicate listeners
+    ipcRenderer.removeAllListeners("recorder:update"); // prevent duplicates
     ipcRenderer.on("recorder:update", (_, data) => {
       callback(data);
     });
   },
 
-  /* ----------- 🔐 LOGIN API (NEW) ----------- */
+  /* ----------- 🔐 LOGIN API ----------- */
 
   login: async (credentials) => {
     try {
       return await ipcRenderer.invoke("login", credentials);
     } catch (err) {
+      console.error("Login error:", err);
       return { success: false, message: err.message };
     }
   },
 
-  /* ----------- AUDIO ----------- */
+  /* ----------- 📤 AUDIO UPLOAD API ----------- */
+
+  uploadAudio: async ({ fileBuffer, fileName, priority, comment }) => {
+    try {
+      return await ipcRenderer.invoke("upload-audio", {
+        fileBuffer: Array.from(new Uint8Array(fileBuffer)),
+        fileName,
+        priority,
+        comment,
+      });
+    } catch (err) {
+      console.error("Upload error:", err);
+      return { success: false, message: err.message };
+    }
+  },
+
+  /* ----------- AUDIO SYSTEM ----------- */
 
   getSystemAudioStream: async () => {
     try {

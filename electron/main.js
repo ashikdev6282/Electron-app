@@ -79,7 +79,7 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
-    mainWindow.webContents.openDevTools({ mode: "detach" }); // openDevTools in separate window
+    // mainWindow.webContents.openDevTools({ mode: "detach" }); // openDevTools in separate window
     broadcastRecorderState();
   });
 
@@ -254,15 +254,15 @@ ipcMain.handle("upload-audio", async (event, payload) => {
       return { success: false, message: "Session expired" };
     }
 
-    // ✅ Convert incoming data to Buffer
+    //  Convert incoming data to Buffer
     const buffer = Buffer.from(fileBuffer);
 
-    // ✅ Convert Buffer → Blob (VERY IMPORTANT)
+    //  Convert Buffer → Blob (VERY IMPORTANT)
     const blob = new Blob([buffer], {
       type: "audio/wav",
     });
 
-    // ✅ Use native FormData (NO require("form-data"))
+    //  Use native FormData (NO require("form-data"))
     const form = new FormData();
 
     const safeFileName = fileName.endsWith(".wav")
@@ -295,7 +295,7 @@ ipcMain.handle("upload-audio", async (event, payload) => {
       return { success: false, message: "Invalid server response" };
     }
 
-    console.log("UPLOAD RESULT:", result);
+    // console.log("UPLOAD RESULT:", result);
 
     return result;
 

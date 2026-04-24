@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Dictate from "./pages/Dictate";
 import FloatingRecorder from "./pages/FloatingRecorder";
 import "./main.css";
+import { Toaster } from "sonner";
 
 function Root() {
   const [hash, setHash] = useState(window.location.hash || "#login");
@@ -37,7 +38,12 @@ function Root() {
     Component = Login;
   }
 
-  return <Component />;
+  return (
+    <>
+      <Component />
+      <Toaster richColors position="top-center" />
+    </>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root />);

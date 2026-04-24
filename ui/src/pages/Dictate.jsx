@@ -4,7 +4,9 @@ import useRecorderSync from "../hooks/useRecorderSync";
 import Waveform from "../components/Waveform";
 import LiveWave from "../components/LiveWave";
 import FileNamePopup from "../components/FileNamePopup";
-import { convertWebmToWav } from "../utils/audioConverter"; // ✅ NEW
+import { convertWebmToWav } from "../utils/audioConverter";
+import DiscardPopup from "../components/DiscardPopup";
+import { toast } from "sonner";
 
 export default function Dictate() {
   const { isRecording, seconds } = useRecorderSync();
@@ -24,14 +26,17 @@ export default function Dictate() {
   const [showNamePopup, setShowNamePopup] = useState(false);
   const [fileNameInput, setFileNameInput] = useState("");
 
-  /* ⏱ FORMAT TIMER */
+  const [showDiscardPopup, setShowDiscardPopup] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  /*  FORMAT TIMER */
   const formatTime = () => {
     const m = String(Math.floor(seconds / 60)).padStart(2, "0");
     const s = String(seconds % 60).padStart(2, "0");
     return `00:${m}:${s}`;
   };
 
-  /* 🎙 START / STOP RECORD */
+  /*  START / STOP RECORD */
   const handleRecord = async () => {
     if (isRecording) {
       mediaRecorderRef.current?.stop();
@@ -48,7 +53,7 @@ export default function Dictate() {
       });
 
       const recorder = new MediaRecorder(stream, {
-        mimeType: "audio/webm;codecs=opus", // ✅ FIXED
+        mimeType: "audio/webm;codecs=opus",
       });
 
       mediaRecorderRef.current = recorder;
@@ -82,7 +87,7 @@ export default function Dictate() {
     }
   };
 
-  /* ▶️ PLAY / PAUSE */
+  /*  PLAY / PAUSE */
   const handlePlayPause = () => {
     if (!audioRef.current) return;
 
@@ -96,7 +101,7 @@ export default function Dictate() {
     setIsPlaying(!isPlaying);
   };
 
-  /* 🔁 DISCARD */
+  /*  DISCARD */
   const handleDiscard = () => {
     setAudioUrl(null);
     setIsPlaying(false);
@@ -106,9 +111,12 @@ export default function Dictate() {
     window.electronAPI.recorderReset();
   };
 
-  /* 🔥 UPLOAD FUNCTION */
+  /*  UPLOAD FUNCTION */
   const uploadRecording = async (customName = "") => {
     try {
+      if (isUploading) return;
+      setIsUploading(true);
+
       const user = JSON.parse(localStorage.getItem("user"));
 
       if (!audioUrl || !chunksRef.current.length) {
@@ -118,13 +126,23 @@ export default function Dictate() {
 
       const timestamp = Date.now();
 
-      let fileName = `REC_${timestamp}.wav`; // ✅ FIXED
+      // ✅ sanitize
+      const safeUsername = (user.username || "user").replace(/\s+/g, "_");
+      const safeInput = (customName || "").replace(/\s+/g, "_");
 
-      if (user.file_naming_type === 2 && customName) {
-        fileName = `REC_${user.userid}_${user.username}_${customName}.wav`;
+      let fileName = "";
+
+      // 🔥 TYPE 1 & 3 → SAME FORMAT
+      if (user.file_naming_type === 1 || user.file_naming_type === 3) {
+        fileName = `REC_${user.userid}_${safeUsername}_${timestamp}.wav`;
       }
 
-      // 🔥 CONVERT HERE (CLEAN)
+      // 🔥 TYPE 2 → CUSTOM
+      else if (user.file_naming_type === 2) {
+        fileName = `REC_${user.userid}_${safeUsername}_${safeInput}.wav`;
+      }
+
+      // 🔥 CONVERT
       const wavBlob = await convertWebmToWav(chunksRef.current);
       const buffer = await wavBlob.arrayBuffer();
 
@@ -138,12 +156,16 @@ export default function Dictate() {
       console.log("UPLOAD RESPONSE 👉", res);
 
       if (res.success) {
+        toast.success("Audio uploaded successfully ✅");
         handleDiscard();
       } else {
-        alert("Upload failed");
+        toast.error(res.message || "Upload failed ❌");
       }
     } catch (err) {
       console.error("UPLOAD ERROR:", err);
+      toast.error("An error occurred during upload ❌");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -206,7 +228,7 @@ export default function Dictate() {
         {!isRecording && audioUrl && (
           <div className="flex w-full gap-4 px-4">
             <button
-              onClick={handleDiscard}
+              onClick={() => setShowDiscardPopup(true)}
               className="flex-1 py-3 rounded-xl bg-red-700 text-white font-semibold shadow-lg active:scale-95 transition"
             >
               Discard
@@ -222,9 +244,22 @@ export default function Dictate() {
                   uploadRecording();
                 }
               }}
-              className="flex-1 py-3 rounded-xl bg-blue-700 text-white font-semibold shadow-lg active:scale-95 transition"
+              disabled={isUploading}
+              className={`flex-1 py-3 rounded-xl font-semibold shadow-lg transition 
+    ${
+      isUploading
+        ? "bg-blue-400 cursor-not-allowed"
+        : "bg-blue-700 active:scale-95"
+    } text-white`}
             >
-              Save
+              {isUploading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Uploading...
+                </span>
+              ) : (
+                "Save"
+              )}
             </button>
           </div>
         )}
@@ -283,6 +318,15 @@ export default function Dictate() {
 
         <p className="text-gray-500 text-sm">{new Date().toLocaleString()}</p>
       </div>
+
+      <DiscardPopup
+        isOpen={showDiscardPopup}
+        onCancel={() => setShowDiscardPopup(false)}
+        onConfirm={() => {
+          handleDiscard();
+          setShowDiscardPopup(false);
+        }}
+      />
 
       <FileNamePopup
         isOpen={showNamePopup}

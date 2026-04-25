@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import logo from "../assets/logo-1.png";
 
@@ -9,11 +9,48 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  /* 🔥 AUTO CLEAR ERROR AFTER 3s */
+  useEffect(() => {
+    if (!error) return;
+
+    const timer = setTimeout(() => {
+      setError("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  /* 🔐 VALIDATION FUNCTION */
+  const validate = () => {
+    if (!email.trim() && !password.trim()) {
+      return "Username and password are required";
+    }
+
+    if (!email.trim()) {
+      return "Username is required";
+    }
+
+    if (!password.trim()) {
+      return "Password is required";
+    }
+
+    if (password.length < 4) {
+      return "Password must be at least 4 characters";
+    }
+    if (email.length > 20) {
+      return "Username must be less than 20 characters";
+    }
+
+    return null;
+  };
+
   const handleLogin = async () => {
     setError("");
 
-    if (!email || !password) {
-      setError("Please enter username and password");
+    const validationError = validate();
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -29,17 +66,15 @@ export default function Login() {
         // 🔥 store full user data
         localStorage.setItem("user", JSON.stringify(res.data));
 
-        // optional (quick access)
         localStorage.setItem("token", res.data.token);
         localStorage.setItem("username", res.data.username);
 
-        /* ✅ REDIRECT TO FLOATING */
         window.electronAPI.startRecorder();
       } else {
         setError(res.message || "Invalid credentials");
       }
     } catch (err) {
-      setError("Something went wrong");
+      setError("Server error. Please try again");
     } finally {
       setLoading(false);
     }
@@ -60,32 +95,32 @@ export default function Login() {
       <div className="w-full max-w-sm bg-[#0f0f0f] border border-[#1f2937] rounded-2xl p-6 shadow-[0_0_20px_rgba(59,130,246,0.15)]">
         {/* USERNAME */}
         <div className="relative mb-5">
-          <User
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
 
           <input
             type="text"
             placeholder="Enter your Username"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (error) setError(""); // 🔥 clear error on typing
+            }}
             className="w-full pl-10 pr-3 py-3 rounded-xl bg-[#111] border border-[#374151] text-white placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
           />
         </div>
 
         {/* PASSWORD */}
         <div className="relative mb-5">
-          <Lock
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
 
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Enter your Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error) setError(""); // 🔥 clear error on typing
+            }}
             className="w-full pl-10 pr-10 py-3 rounded-xl bg-[#111] border border-[#374151] text-white placeholder-gray-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
           />
 
@@ -99,7 +134,9 @@ export default function Login() {
 
         {/* ERROR */}
         {error && (
-          <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
+          <p className="text-red-500 text-sm mb-3 text-center animate-pulse">
+            {error}
+          </p>
         )}
 
         {/* LOGIN BUTTON */}

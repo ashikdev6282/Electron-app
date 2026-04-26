@@ -16,6 +16,9 @@ require("dotenv").config();
 let mainWindow = null;
 let floatingWindow = null;
 
+/* 🔥 GLOBAL AUDIO STORAGE */
+let recordedChunksGlobal = [];
+
 const isDev = !app.isPackaged;
 
 /* ---------------- GLOBAL RECORDER STATE ---------------- */
@@ -79,11 +82,9 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
-    // mainWindow.webContents.openDevTools({ mode: "detach" }); // openDevTools in separate window
     broadcastRecorderState();
   });
 
-  /* 🔽 MINIMIZE → FLOATING */
   mainWindow.on("minimize", (e) => {
     e.preventDefault();
     mainWindow.hide();
@@ -96,7 +97,6 @@ function createMainWindow() {
     broadcastRecorderState();
   });
 
-  /* ❌ CLOSE → FULL EXIT */
   mainWindow.on("close", () => {
     app.isQuiting = true;
     app.quit();
@@ -126,7 +126,6 @@ function createFloatingWindow() {
     alwaysOnTop: true,
     resizable: false,
     movable: true,
-    skipTaskbar: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -148,7 +147,6 @@ function createFloatingWindow() {
     broadcastRecorderState();
   });
 
-  /* ❌ CLOSE → FULL EXIT */
   floatingWindow.on("close", () => {
     app.isQuiting = true;
     app.quit();
@@ -184,30 +182,16 @@ ipcMain.on("open-main-window", () => {
     mainWindow.show();
     mainWindow.focus();
 
-    if (isDev) {
-      mainWindow.loadURL("http://localhost:5173#dictate");
-    } else {
-      mainWindow.loadFile(path.join(__dirname, "../ui/dist/index.html"), {
-        hash: "dictate",
-      });
-    }
+    // 🔥 DO NOT reload the app
+    mainWindow.webContents.send("navigate", "dictate");
+
+    // 🔥 force sync after open
+    setTimeout(() => {
+      mainWindow.webContents.send("recorder:finished");
+    }, 100);
 
     broadcastRecorderState();
   }
-});
-
-/* ---------------- WINDOW CONTROLS ---------------- */
-
-ipcMain.on("minimize-app", () => {
-  if (mainWindow?.isVisible()) mainWindow.minimize();
-  else if (floatingWindow?.isVisible()) floatingWindow.minimize();
-});
-
-ipcMain.on("toggle-maximize", () => {
-  const win = mainWindow?.isVisible() ? mainWindow : floatingWindow;
-  if (!win) return;
-
-  win.isMaximized() ? win.unmaximize() : win.maximize();
 });
 
 /* ---------------- LOGIN API ---------------- */
@@ -224,7 +208,6 @@ ipcMain.handle("login", async (event, credentials) => {
     });
 
     const text = await response.text();
-
     let data;
 
     try {
@@ -234,7 +217,7 @@ ipcMain.handle("login", async (event, credentials) => {
     }
 
     if (data.success) {
-      global.userSession = data.data; // Store user data in global variable
+      global.userSession = data.data;
     } else {
       return { success: false, message: data.message };
     }
@@ -246,6 +229,7 @@ ipcMain.handle("login", async (event, credentials) => {
 });
 
 /* ---------------- AUDIO API ---------------- */
+
 ipcMain.handle("upload-audio", async (event, payload) => {
   try {
     const { fileBuffer, fileName, priority, comment } = payload;
@@ -254,20 +238,17 @@ ipcMain.handle("upload-audio", async (event, payload) => {
       return { success: false, message: "Session expired" };
     }
 
-    //  Convert incoming data to Buffer
     const buffer = Buffer.from(fileBuffer);
 
-    //  Convert Buffer → Blob (VERY IMPORTANT)
     const blob = new Blob([buffer], {
       type: "audio/wav",
     });
 
-    //  Use native FormData (NO require("form-data"))
     const form = new FormData();
 
     const safeFileName = fileName.endsWith(".wav")
-  ? fileName
-  : fileName + ".wav";
+      ? fileName
+      : fileName + ".wav";
 
     form.append("upload_priority", priority || "normal");
     form.append("comment", comment || "");
@@ -287,18 +268,12 @@ ipcMain.handle("upload-audio", async (event, payload) => {
 
     const text = await response.text();
 
-    let result;
     try {
-      result = JSON.parse(text);
+      return JSON.parse(text);
     } catch {
       console.error("INVALID RESPONSE:", text);
       return { success: false, message: "Invalid server response" };
     }
-
-    // console.log("UPLOAD RESULT:", result);
-
-    return result;
-
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
     return { success: false, message: error.message };
@@ -331,22 +306,25 @@ ipcMain.on("recorder:stop", () => {
 
   clearInterval(timerInterval);
   broadcastRecorderState();
+
+  // 🔥 IMPORTANT: notify both windows
+  mainWindow?.webContents.send("recorder:finished");
+  floatingWindow?.webContents.send("recorder:finished");
 });
 
-ipcMain.on("recorder:pause", () => {
-  recorderState.isPaused = true;
-  pauseTime = Date.now();
-  broadcastRecorderState();
+/* 🔥 STORE AUDIO */
+ipcMain.on("set-recorded-chunks", (event, chunks) => {
+  recordedChunksGlobal = chunks;
 });
 
-ipcMain.on("recorder:resume", () => {
-  recorderState.isPaused = false;
+/* 🔥 GET AUDIO */
+ipcMain.handle("get-recorded-chunks", () => {
+  return recordedChunksGlobal;
+});
 
-  if (startTime && pauseTime) {
-    startTime += Date.now() - pauseTime;
-  }
-
-  broadcastRecorderState();
+/* 🔥 CLEAR AUDIO */
+ipcMain.on("clear-recorded-chunks", () => {
+  recordedChunksGlobal = [];
 });
 
 ipcMain.on("recorder:reset", () => {
@@ -360,6 +338,10 @@ ipcMain.on("recorder:reset", () => {
   pauseTime = null;
 
   clearInterval(timerInterval);
+
+  // 🔥 CLEAR AUDIO ALSO
+  recordedChunksGlobal = [];
+
   broadcastRecorderState();
 });
 

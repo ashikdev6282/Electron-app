@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Mic, Square, Send, Maximize2 } from "lucide-react";
 import useRecorderSync from "../hooks/useRecorderSync";
 
@@ -6,7 +6,8 @@ export default function FloatingRecorder() {
   const { isRecording, seconds } = useRecorderSync();
   const username = localStorage.getItem("username") || "Unknown";
 
-  const [chunksRef] = useState([]); // optional
+  const chunksRef = useRef([]);
+  const mediaRecorderRef = useRef(null);
 
   const formatTime = () => {
     const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -15,28 +16,65 @@ export default function FloatingRecorder() {
   };
 
   /* 🎙 RECORD / STOP */
-  const handleRecord = () => {
+  const handleRecord = async () => {
     if (isRecording) {
+      mediaRecorderRef.current?.stop();
       window.electronAPI.recorderStop();
     } else {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 48000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm;codecs=opus",
+      });
+
+      mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        if (!chunksRef.current.length) return;
+
+        const buffers = [];
+
+        for (const chunk of chunksRef.current) {
+          const arrayBuffer = await chunk.arrayBuffer();
+          buffers.push(Array.from(new Uint8Array(arrayBuffer)));
+        }
+
+        console.log("SENDING BUFFERS:", buffers);
+
+        window.electronAPI.setRecordedChunks(buffers);
+      };
+
+      recorder.start(200);
       window.electronAPI.recorderStart();
     }
   };
 
   /* 📤 SEND */
   const handleSend = () => {
-    if (seconds === 0) {
-      console.log("No recording yet");
-      return;
+    if (seconds === 0) return;
+
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      window.electronAPI.recorderStop();
     }
 
-     if (isRecording) {
-    window.electronAPI.recorderStop();
-  }
-
-  // 🚀 Open main dictate window
-  window.electronAPI.openMainWindow();
-    
+    // 🚀 No hacky delay needed anymore
+    setTimeout(() => {
+      window.electronAPI.openMainWindow();
+    }, 150);
   };
 
   return (
@@ -64,7 +102,6 @@ export default function FloatingRecorder() {
           minWidth: 85,
         }}
       >
-        {/* USERNAME */}
         <div
           title={username}
           style={{
@@ -74,45 +111,40 @@ export default function FloatingRecorder() {
             textAlign: "center",
             wordBreak: "break-word",
             lineHeight: "12px",
-            marginBottom: 8, // 🔥 better alignment
+            marginBottom: 8,
             fontWeight: "bold",
           }}
         >
           {username}
         </div>
 
-        {/* TIMER + REC */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8, // 🔥 better spacing
-            fontSize: 15, // 🔥 clearer
+            gap: 8,
+            fontSize: 15,
             opacity: isRecording ? 1 : 0.5,
             lineHeight: "1",
           }}
         >
           {isRecording && (
             <>
-              {/* 🔴 DOT */}
               <div
                 style={{
                   width: 8,
                   height: 8,
                   borderRadius: "50%",
-                  background: "#f87171", // 🔥 softer red
+                  background: "#f87171",
                   boxShadow: "0 0 6px #ef4444",
                   animation: "pulse 1s infinite",
                 }}
               />
-
-              {/* REC TEXT */}
               <span
                 style={{
                   color: "#f87171",
                   fontSize: 12,
                   fontWeight: 500,
-                  letterSpacing: "0.5px",
                 }}
               >
                 REC
@@ -120,7 +152,6 @@ export default function FloatingRecorder() {
             </>
           )}
 
-          {/* TIME */}
           <span
             style={{
               fontWeight: 600,
@@ -150,7 +181,7 @@ export default function FloatingRecorder() {
       <IconButton
         onClick={() => window.electronAPI.openMainWindow()}
         bg="#27272a"
-        style={{ marginLeft: 6 }} // 🔥 correct spacing fix
+        style={{ marginLeft: 6 }}
       >
         <Maximize2 size={18} />
       </IconButton>
@@ -158,15 +189,14 @@ export default function FloatingRecorder() {
   );
 }
 
-/* ---------------- BUTTON ---------------- */
-
-function IconButton({ children, onClick, bg, primary, style }) {
+/* BUTTON */
+function IconButton({ children, onClick, bg, style }) {
   return (
     <button
       onClick={onClick}
       style={{
-        width:  40, // 🔥 record button slightly bigger
-        height:  40,
+        width: 40,
+        height: 40,
         borderRadius: "50%",
         border: "none",
         background: bg,
@@ -177,9 +207,6 @@ function IconButton({ children, onClick, bg, primary, style }) {
         cursor: "pointer",
         WebkitAppRegion: "no-drag",
         transition: "0.2s",
-        boxShadow: primary
-          ? "0 0 12px rgba(239,68,68,0.5)"
-          : "none",
         ...style,
       }}
     >

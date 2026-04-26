@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import useRecorderSync from "../hooks/useRecorderSync";
 import Waveform from "../components/Waveform";
@@ -15,6 +15,7 @@ export default function Dictate() {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const audioRef = useRef(null);
+  const waveRef = useRef(null);
 
   const [audioUrl, setAudioUrl] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -28,6 +29,48 @@ export default function Dictate() {
 
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // 🔥 REPLACE YOUR useEffect WITH THIS
+
+  useEffect(() => {
+    const loadChunks = async () => {
+      try {
+        const rawChunks = await window.electronAPI.getRecordedChunks();
+
+        console.log("RECEIVED RAW CHUNKS:", rawChunks);
+
+        if (!rawChunks || !rawChunks.length) return;
+
+        // 🔥 convert back to Uint8Array
+        const reconstructed = rawChunks.map((chunkArray) => {
+          return new Uint8Array(chunkArray);
+        });
+
+        chunksRef.current = reconstructed;
+
+        // 🔥 rebuild blob correctly
+        const blob = new Blob(reconstructed, {
+          type: "audio/webm",
+        });
+
+        const url = URL.createObjectURL(blob);
+
+        setAudioUrl(url);
+      } catch (err) {
+        console.error("Load chunks error:", err);
+      }
+    };
+
+    // ✅ RUN ON MOUNT
+    loadChunks();
+
+    // ✅ RUN AFTER RECORDING FINISH
+    if (window.electronAPI?.onRecorderFinished) {
+      window.electronAPI.onRecorderFinished(() => {
+        loadChunks();
+      });
+    }
+  }, []);
 
   /*  FORMAT TIMER */
   const formatTime = () => {
@@ -71,6 +114,8 @@ export default function Dictate() {
           return;
         }
 
+        window.electronAPI.setRecordedChunks([...chunksRef.current]);
+
         // preview still uses webm
         const blob = new Blob(chunksRef.current, {
           type: "audio/webm",
@@ -78,8 +123,6 @@ export default function Dictate() {
 
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
-
-        audioRef.current = new Audio(url);
       };
 
       recorder.start(200);
@@ -89,16 +132,16 @@ export default function Dictate() {
 
   /*  PLAY / PAUSE */
   const handlePlayPause = () => {
-    if (!audioRef.current) return;
+    const wave = waveRef.current;
+    if (!wave) return;
 
     if (isPlaying) {
-      audioRef.current.pause();
+      wave.pause();
+      setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      audioRef.current.onended = () => setIsPlaying(false);
+      wave.play();
+      setIsPlaying(true);
     }
-
-    setIsPlaying(!isPlaying);
   };
 
   /*  DISCARD */
@@ -106,9 +149,9 @@ export default function Dictate() {
     setAudioUrl(null);
     setIsPlaying(false);
     chunksRef.current = [];
-    audioRef.current = null;
 
     window.electronAPI.recorderReset();
+    window.electronAPI.clearRecordedChunks();
   };
 
   /*  UPLOAD FUNCTION */
@@ -195,6 +238,7 @@ export default function Dictate() {
             audioUrl={audioUrl}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
+            onReady={(wave) => (waveRef.current = wave)}
           />
         ) : (
           <div className="h-full" />
@@ -202,7 +246,23 @@ export default function Dictate() {
       </div>
 
       <div className="h-30 bg-[#111] rounded-2xl flex items-center justify-around px-6">
-        <SkipBack className="text-gray-600 w-6 h-6" />
+        <SkipBack
+          onClick={() => {
+            const wave = waveRef.current;
+            if (!wave) return;
+
+            const duration = wave.getDuration();
+            const current = wave.getCurrentTime();
+
+            wave.pause(); // 🔥 fix overlap
+
+            const newTime = Math.max(0, current - 5);
+            wave.seekTo(newTime / duration);
+
+            if (isPlaying) wave.play();
+          }}
+          className="text-gray-600 w-6 h-6 cursor-pointer"
+        />
 
         <button
           onClick={handlePlayPause}
@@ -212,7 +272,23 @@ export default function Dictate() {
           {isPlaying ? <Pause size={20} /> : <Play size={20} />}
         </button>
 
-        <SkipForward className="text-gray-600 w-6 h-6" />
+        <SkipForward
+          onClick={() => {
+            const wave = waveRef.current;
+            if (!wave) return;
+
+            const duration = wave.getDuration();
+            const current = wave.getCurrentTime();
+
+            wave.pause(); // 🔥 fix overlap
+
+            const newTime = Math.min(duration, current + 5);
+            wave.seekTo(newTime / duration);
+
+            if (isPlaying) wave.play();
+          }}
+          className="text-gray-600 w-6 h-6 cursor-pointer"
+        />
       </div>
 
       <div className="h-40 bg-[#111] rounded-2xl flex flex-col items-center justify-center">
@@ -231,7 +307,7 @@ export default function Dictate() {
               onClick={() => setShowDiscardPopup(true)}
               className="flex-1 py-3 rounded-xl bg-red-700 text-white font-semibold shadow-lg active:scale-95 transition"
             >
-              Discard
+              DISCARD
             </button>
 
             <button
@@ -258,7 +334,7 @@ export default function Dictate() {
                   Uploading...
                 </span>
               ) : (
-                "Save"
+                "SEND"
               )}
             </button>
           </div>

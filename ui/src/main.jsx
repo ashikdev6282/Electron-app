@@ -9,7 +9,14 @@ import { Toaster } from "sonner";
 function Root() {
   const [hash, setHash] = useState(window.location.hash || "#login");
 
-  /* 🔥 HANDLE HASH CHANGE */
+  /* ✅ FORCE DEFAULT ROUTE (FIX BLACK SCREEN) */
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.location.hash = "#login";
+    }
+  }, []);
+
+  /* 🔥 HASH CHANGE */
   useEffect(() => {
     const handleHashChange = () => {
       setHash(window.location.hash || "#login");
@@ -22,20 +29,40 @@ function Root() {
     };
   }, []);
 
-  /* 🔥 APPLY FLOATING CLASS SAFELY */
+  /* 🔥 ✅ ELECTRON NAVIGATION SYNC */
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    window.electronAPI.onNavigate((route) => {
+      if (route === "dictate") window.location.hash = "#dictate";
+      if (route === "mini") window.location.hash = "#mini";
+      if (route === "login") window.location.hash = "#login";
+    });
+  }, []);
+
+  /* 🔥 DEBUG (REMOVE LATER) */
+  useEffect(() => {
+    console.log("CURRENT HASH:", hash);
+  }, [hash]);
+
+  /* 🔥 FLOATING CLASS */
   useEffect(() => {
     document.body.classList.toggle("floating", hash === "#mini");
   }, [hash]);
 
-  /* 🔥 ROUTING */
+  /* 🔥 SAFE ROUTING */
   let Component;
 
-  if (hash === "#mini") {
-    Component = FloatingRecorder;
-  } else if (hash === "#dictate") {
-    Component = Dictate;
-  } else {
-    Component = Login;
+  switch (hash) {
+    case "#mini":
+      Component = FloatingRecorder;
+      break;
+    case "#dictate":
+      Component = Dictate;
+      break;
+    case "#login":
+    default:
+      Component = Login;
   }
 
   return (

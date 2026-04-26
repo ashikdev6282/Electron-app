@@ -40,6 +40,31 @@ contextBridge.exposeInMainWorld("electronAPI", {
     });
   },
 
+  onRecorderFinished: (callback) => {
+  ipcRenderer.removeAllListeners("recorder:finished");
+  ipcRenderer.on("recorder:finished", () => {
+    callback();
+  });
+},
+
+onNavigate: (callback) => {
+  ipcRenderer.on("navigate", (_, route) => {
+    callback(route);
+  });
+},
+
+  setRecordedChunks: (chunks) => {
+    ipcRenderer.send("set-recorded-chunks", chunks);
+  },
+
+  getRecordedChunks: () => {
+    return ipcRenderer.invoke("get-recorded-chunks");
+  },
+
+  clearRecordedChunks: () => {
+    ipcRenderer.send("clear-recorded-chunks");
+  },
+
   /* ----------- 🔐 LOGIN API ----------- */
 
   login: async (credentials) => {

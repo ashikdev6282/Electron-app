@@ -1,22 +1,27 @@
 import { useEffect, useRef } from "react";
 import WaveSurfer from "wavesurfer.js";
 
-export default function Waveform({ audioUrl, isPlaying, setIsPlaying }) {
+export default function Waveform({
+  audioUrl,
+  isPlaying,
+  setIsPlaying,
+  onReady,
+}) {
   const containerRef = useRef(null);
   const waveRef = useRef(null);
 
-  /* 🔥 INIT + LOAD AUDIO */
+  /* 🔥 INIT WAVE */
   useEffect(() => {
     if (!containerRef.current || !audioUrl) return;
 
-    // destroy old instance safely
+    // destroy old instance
     if (waveRef.current) {
       waveRef.current.destroy();
       waveRef.current = null;
     }
 
     try {
-      waveRef.current = WaveSurfer.create({
+      const wave = WaveSurfer.create({
         container: containerRef.current,
         waveColor: "#ffffff",
         progressColor: "#ef4444",
@@ -28,13 +33,19 @@ export default function Waveform({ audioUrl, isPlaying, setIsPlaying }) {
         interact: false,
       });
 
-      waveRef.current.load(audioUrl);
+      wave.load(audioUrl);
 
-      /* 🔥 AUTO STOP */
-      waveRef.current.on("finish", () => {
+      /* 🔥 READY */
+      wave.on("ready", () => {
+        if (onReady) onReady(wave);
+      });
+
+      /* 🔥 FINISH */
+      wave.on("finish", () => {
         setIsPlaying(false);
       });
 
+      waveRef.current = wave;
     } catch (err) {
       console.error("WaveSurfer error:", err);
     }
@@ -44,20 +55,21 @@ export default function Waveform({ audioUrl, isPlaying, setIsPlaying }) {
     };
   }, [audioUrl]);
 
-  /* ▶️ PLAY / PAUSE */
+  /* ▶️ PLAY / PAUSE SYNC */
   useEffect(() => {
-    if (!waveRef.current) return;
+    const wave = waveRef.current;
+    if (!wave) return;
 
     if (isPlaying) {
-      waveRef.current.play();
+      wave.play();
     } else {
-      waveRef.current.pause();
+      wave.pause();
     }
   }, [isPlaying]);
 
   return (
     <div className="relative overflow-hidden h-36 bg-[#0f0f0f] rounded-2xl">
-      {/* CENTERED WAVE */}
+      {/* CENTER ALIGN */}
       <div className="absolute left-1/2 top-0 -translate-x-1/2 w-full">
         <div ref={containerRef} />
       </div>

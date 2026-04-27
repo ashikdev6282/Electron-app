@@ -6,6 +6,7 @@ const {
   dialog,
   desktopCapturer,
   screen,
+  globalShortcut,
 } = require("electron");
 
 const path = require("path");
@@ -162,7 +163,25 @@ Menu.setApplicationMenu(null);
 
 app.whenReady().then(() => {
   createMainWindow();
+
+  /*  GLOBAL SHORTCUTS */
+
+  globalShortcut.register("F9", () => {
+    mainWindow?.webContents.send("shortcut:record");
+    floatingWindow?.webContents.send("shortcut:record");
+  });
+
+  globalShortcut.register("F10", () => {
+    mainWindow?.webContents.send("shortcut:stop");
+    floatingWindow?.webContents.send("shortcut:stop");
+  });
+
+  globalShortcut.register("F8", () => {
+    mainWindow?.webContents.send("shortcut:send");
+    floatingWindow?.webContents.send("shortcut:send");
+  });
 });
+
 
 /* ---------------- WINDOW FLOW ---------------- */
 
@@ -184,6 +203,8 @@ ipcMain.on("open-main-window", () => {
 
     // 🔥 DO NOT reload the app
     mainWindow.webContents.send("navigate", "dictate");
+
+     mainWindow.webContents.send("trigger-send-flow");
 
     // 🔥 force sync after open
     setTimeout(() => {
@@ -375,4 +396,8 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   app.isQuiting = true;
+});
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
 });

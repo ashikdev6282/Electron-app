@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef, useEffect } from "react";
 import { Mic, Square, Send, Maximize2 } from "lucide-react";
 import useRecorderSync from "../hooks/useRecorderSync";
 
@@ -8,6 +8,7 @@ export default function FloatingRecorder() {
 
   const chunksRef = useRef([]);
   const mediaRecorderRef = useRef(null);
+  const isBusyRef = useRef(false);
 
   const formatTime = () => {
     const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -17,48 +18,57 @@ export default function FloatingRecorder() {
 
   /* 🎙 RECORD / STOP */
   const handleRecord = async () => {
-    if (isRecording) {
-      mediaRecorderRef.current?.stop();
-      window.electronAPI.recorderStop();
-    } else {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 48000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+    if (isBusyRef.current) return;
+    isBusyRef.current = true;
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: "audio/webm;codecs=opus",
-      });
+    try {
+      if (isRecording) {
+        mediaRecorderRef.current?.stop();
+        window.electronAPI.recorderStop();
+      } else {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: 48000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
 
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
+        const recorder = new MediaRecorder(stream, {
+          mimeType: "audio/webm;codecs=opus",
+        });
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
+        mediaRecorderRef.current = recorder;
+        chunksRef.current = [];
 
-      recorder.onstop = async () => {
-        if (!chunksRef.current.length) return;
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
 
-        const buffers = [];
+        recorder.onstop = async () => {
+          if (!chunksRef.current.length) return;
 
-        for (const chunk of chunksRef.current) {
-          const arrayBuffer = await chunk.arrayBuffer();
-          buffers.push(Array.from(new Uint8Array(arrayBuffer)));
-        }
+          const buffers = [];
 
-        console.log("SENDING BUFFERS:", buffers);
+          for (const chunk of chunksRef.current) {
+            const arrayBuffer = await chunk.arrayBuffer();
+            buffers.push(Array.from(new Uint8Array(arrayBuffer)));
+          }
 
-        window.electronAPI.setRecordedChunks(buffers);
-      };
+          window.electronAPI.setRecordedChunks(buffers);
+        };
 
-      recorder.start(200);
-      window.electronAPI.recorderStart();
+        recorder.start(200);
+        window.electronAPI.recorderStart();
+      }
+    } catch (err) {
+      console.error("Recording error:", err);
+    } finally {
+      setTimeout(() => {
+        isBusyRef.current = false;
+      }, 300);
     }
   };
 
@@ -71,11 +81,37 @@ export default function FloatingRecorder() {
       window.electronAPI.recorderStop();
     }
 
-    // 🚀 No hacky delay needed anymore
     setTimeout(() => {
       window.electronAPI.openMainWindow();
     }, 150);
   };
+
+  /* ⌨️ SHORTCUT SYNC */
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    window.electronAPI.onShortcut((action) => {
+      switch (action) {
+        case "record":
+          if (!isRecording) handleRecord();
+          break;
+
+        case "stop":
+          if (isRecording) {
+            mediaRecorderRef.current?.stop();
+            window.electronAPI.recorderStop();
+          }
+          break;
+
+        case "send":
+          handleSend();
+          break;
+
+        default:
+          break;
+      }
+    });
+  }, [isRecording]);
 
   return (
     <div
@@ -90,6 +126,7 @@ export default function FloatingRecorder() {
         padding: "0 10px 0 12px",
         color: "white",
         WebkitAppRegion: "drag",
+        overflow: "visible",
       }}
     >
       {/* USERNAME + TIMER */}
@@ -152,65 +189,90 @@ export default function FloatingRecorder() {
             </>
           )}
 
-          <span
-            style={{
-              fontWeight: 600,
-              letterSpacing: "1px",
-            }}
-          >
+          <span style={{ fontWeight: 600, letterSpacing: "1px" }}>
             {formatTime()}
           </span>
         </div>
       </div>
 
       {/* CONTROLS */}
-      <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 12, WebkitAppRegion: "no-drag" }}>
         <IconButton
           onClick={handleRecord}
           bg={isRecording ? "#dc2626" : "#ef4444"}
+          shortcut={isRecording ? "F10" : "F9"} // ✅ FIXED
         >
           {isRecording ? <Square size={18} /> : <Mic size={18} />}
         </IconButton>
 
-        <IconButton onClick={handleSend} bg="#4f46e5">
+        <IconButton
+          onClick={handleSend}
+          bg="#4f46e5"
+          shortcut="F8" // ✅ FIXED
+        >
           <Send size={18} />
         </IconButton>
       </div>
 
       {/* MAXIMIZE */}
-      <IconButton
-        onClick={() => window.electronAPI.openMainWindow()}
-        bg="#27272a"
-        style={{ marginLeft: 6 }}
-      >
-        <Maximize2 size={18} />
-      </IconButton>
+      <div style={{ WebkitAppRegion: "no-drag" }}>
+        <IconButton
+          onClick={() => window.electronAPI.openMainWindow()}
+          bg="#27272a"
+          style={{ marginLeft: 6 }}
+        >
+          <Maximize2 size={18} />
+        </IconButton>
+      </div>
     </div>
   );
 }
 
 /* BUTTON */
-function IconButton({ children, onClick, bg, style }) {
+function IconButton({ children, onClick, bg, style, shortcut }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        width: 40,
-        height: 40,
-        borderRadius: "50%",
-        border: "none",
-        background: bg,
-        color: "white",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        WebkitAppRegion: "no-drag",
-        transition: "0.2s",
-        ...style,
-      }}
-    >
-      {children}
-    </button>
+    <div style={{ position: "relative", WebkitAppRegion: "no-drag" }}>
+      <button
+        onClick={onClick}
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          border: "none",
+          background: bg,
+          color: "white",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          transition: "0.2s",
+          WebkitAppRegion: "no-drag",
+          ...style,
+        }}
+      >
+        {children}
+      </button>
+
+      {shortcut && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: -4,
+            right: -4,
+            background: "#111",
+            border: "1px solid #374151",
+            color: "#9ca3af",
+            fontSize: 9,
+            fontWeight: 500,
+            padding: "2px 5px",
+            borderRadius: 4,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+            pointerEvents: "none",
+          }}
+        >
+          {shortcut}
+        </div>
+      )}
+    </div>
   );
 }

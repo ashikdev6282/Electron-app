@@ -212,6 +212,31 @@ export default function Dictate() {
     }
   };
 
+  const handleSendFlow = () => {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user) return;
+
+    // 🔥 WAIT until audio is ready
+    setTimeout(() => {
+      if (!chunksRef.current.length) return;
+
+      if (user.file_naming_type === 2) {
+        setShowNamePopup(true);
+      } else {
+        uploadRecording();
+      }
+    }, 200);
+  };
+
+  useEffect(() => {
+    if (!window.electronAPI?.onTriggerSendFlow) return;
+
+    window.electronAPI.onTriggerSendFlow(() => {
+      handleSendFlow();
+    });
+  }, []);
+
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">
       <div className="relative text-center">

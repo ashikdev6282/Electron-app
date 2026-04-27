@@ -40,12 +40,35 @@ contextBridge.exposeInMainWorld("electronAPI", {
     });
   },
 
+
+  /* ----------- ⌨ GLOBAL SHORTCUTS ----------- */
+
+onShortcut: (callback) => {
+  ipcRenderer.removeAllListeners("shortcut:record");
+  ipcRenderer.removeAllListeners("shortcut:stop");
+  ipcRenderer.removeAllListeners("shortcut:send");
+
+  ipcRenderer.on("shortcut:record", () => callback("record"));
+  ipcRenderer.on("shortcut:stop", () => callback("stop"));
+  ipcRenderer.on("shortcut:send", () => callback("send"));
+},
+
   onRecorderFinished: (callback) => {
   ipcRenderer.removeAllListeners("recorder:finished");
   ipcRenderer.on("recorder:finished", () => {
     callback();
   });
 },
+
+
+onTriggerSendFlow: (callback) => {
+  ipcRenderer.removeAllListeners("trigger-send-flow");
+  ipcRenderer.on("trigger-send-flow", () => {
+    callback();
+  });
+},
+
+
 
 onNavigate: (callback) => {
   ipcRenderer.on("navigate", (_, route) => {

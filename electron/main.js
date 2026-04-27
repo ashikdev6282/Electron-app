@@ -12,7 +12,17 @@ const {
 const path = require("path");
 const fs = require("fs");
 
-require("dotenv").config();
+const envPath =
+  process.env.NODE_ENV === "production"
+    ? path.join(process.resourcesPath, ".env")
+    : path.join(__dirname, "../.env");
+
+if (fs.existsSync(envPath)) {
+  require("dotenv").config({ path: envPath });
+  console.log("✅ ENV LOADED FROM:", envPath);
+} else {
+  console.error("❌ ENV FILE NOT FOUND:", envPath);
+}
 
 let mainWindow = null;
 let floatingWindow = null;
@@ -182,7 +192,6 @@ app.whenReady().then(() => {
   });
 });
 
-
 /* ---------------- WINDOW FLOW ---------------- */
 
 ipcMain.on("start-recorder", () => {
@@ -204,7 +213,7 @@ ipcMain.on("open-main-window", () => {
     // 🔥 DO NOT reload the app
     mainWindow.webContents.send("navigate", "dictate");
 
-     mainWindow.webContents.send("trigger-send-flow");
+    mainWindow.webContents.send("trigger-send-flow");
 
     // 🔥 force sync after open
     setTimeout(() => {
@@ -223,7 +232,7 @@ ipcMain.handle("login", async (event, credentials) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Transaction-ID": b128da207a1804a457a42ab7d998c15f97ba54d7b842e0cba5e6a3f5ec542a13,
+        "X-Transaction-ID": process.env.TRANSACTION_ID || "no-transaction-id-provided",
       },
       body: JSON.stringify(credentials),
     });
@@ -284,7 +293,7 @@ ipcMain.handle("upload-audio", async (event, payload) => {
           "X-Transaction-ID": process.env.TRANSACTION_ID,
         },
         body: form,
-      }
+      },
     );
 
     const text = await response.text();

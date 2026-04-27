@@ -11,15 +11,20 @@ const {
 
 const path = require("path");
 const fs = require("fs");
+const dotenv = require("dotenv");
 
-const envPath =
-  process.env.NODE_ENV === "production"
-    ? path.join(process.resourcesPath, ".env")
-    : path.join(__dirname, "../.env");
+// 🔥 Define both paths
+const prodPath = path.join(process.resourcesPath, ".env");
+const devPath = path.join(__dirname, "../.env");
 
+// 🔥 Pick whichever exists
+const envPath = fs.existsSync(prodPath) ? prodPath : devPath;
+
+// 🔥 Load ENV
 if (fs.existsSync(envPath)) {
-  require("dotenv").config({ path: envPath });
+  dotenv.config({ path: envPath });
   console.log("✅ ENV LOADED FROM:", envPath);
+  console.log("🔥 TRANSACTION_ID:", process.env.TRANSACTION_ID);
 } else {
   console.error("❌ ENV FILE NOT FOUND:", envPath);
 }
@@ -232,7 +237,7 @@ ipcMain.handle("login", async (event, credentials) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Transaction-ID": process.env.TRANSACTION_ID || "no-transaction-id-provided",
+        "X-Transaction-ID": (process.env.TRANSACTION_ID || "").trim(),
       },
       body: JSON.stringify(credentials),
     });

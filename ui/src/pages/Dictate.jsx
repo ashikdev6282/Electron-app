@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, HelpCircle } from "lucide-react";
 import useRecorderSync from "../hooks/useRecorderSync";
 import Waveform from "../components/Waveform";
 import LiveWave from "../components/LiveWave";
@@ -30,7 +30,7 @@ export default function Dictate() {
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // 🔥 REPLACE YOUR useEffect WITH THIS
+  //  REPLACE YOUR useEffect WITH THIS
 
   useEffect(() => {
     const loadChunks = async () => {
@@ -182,7 +182,7 @@ export default function Dictate() {
 
       // 🔥 TYPE 2 → CUSTOM
       else if (user.file_naming_type === 2) {
-        fileName = `REC_${user.userid}_${safeUsername}_${safeInput}.wav`;
+        fileName = `REC_${user.userid}_${safeUsername}_${safeInput}_${timestamp}.wav`;
       }
 
       // 🔥 CONVERT
@@ -214,7 +214,17 @@ export default function Dictate() {
 
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">
-      <div className="text-center">
+      <div className="relative text-center">
+        <button
+          onClick={() => {
+            // 👉 open help link OR modal
+            window.open("https://your-help-link.com", "_blank");
+          }}
+          className="absolute right-0 top-0 text-gray-400 hover:text-white transition"
+          title="Help"
+        >
+          <HelpCircle size={20} />
+        </button>
         <p className="text-sm text-gray-400">{username}</p>
 
         <h1

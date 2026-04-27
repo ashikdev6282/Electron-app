@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+
 export default function FileNamePopup({
   isOpen,
   onClose,
@@ -5,7 +7,46 @@ export default function FileNamePopup({
   fileName,
   setFileName,
 }) {
+  const [error, setError] = useState("");
+
+  /* 🔥 AUTO CLEAR ERROR */
+  useEffect(() => {
+    if (!error) return;
+
+    const timer = setTimeout(() => {
+      setError("");
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [error]);
+
   if (!isOpen) return null;
+
+  const handleSubmit = () => {
+    const name = fileName.trim();
+
+    // ❌ EMPTY
+    if (!name) {
+      setError("File name is required");
+      return;
+    }
+
+    // ❌ TOO SHORT
+    if (name.length < 3) {
+      setError("Minimum 3 characters required");
+      return;
+    }
+
+    // ❌ INVALID CHARACTERS
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+      setError("Only letters, numbers, _ and - allowed");
+      return;
+    }
+
+    // ✅ SUCCESS
+    onSubmit(name);
+    setFileName("");
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -24,14 +65,22 @@ export default function FileNamePopup({
           placeholder="Enter file name"
           value={fileName}
           onChange={(e) => setFileName(e.target.value)}
-          className="w-full px-4 py-2 rounded-lg bg-[#111] border border-gray-600 text-white outline-none mb-4"
+          className="w-full px-4 py-2 rounded-lg bg-[#111] border border-gray-600 text-white outline-none mb-2"
         />
 
-        <div className="flex gap-3">
+        {/* 🔥 ERROR MESSAGE */}
+        {error && (
+          <p className="text-red-500 text-xs text-center mb-2">
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-3 mt-2">
           <button
             onClick={() => {
               onClose();
               setFileName("");
+              setError("");
             }}
             className="flex-1 py-2 rounded-lg bg-black text-red-500 border border-gray-700"
           >
@@ -39,11 +88,7 @@ export default function FileNamePopup({
           </button>
 
           <button
-            onClick={() => {
-              if (!fileName.trim()) return;
-              onSubmit(fileName);
-              setFileName("");
-            }}
+            onClick={handleSubmit}
             className="flex-1 py-2 rounded-lg bg-blue-600 text-white"
           >
             SEND

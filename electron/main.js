@@ -223,7 +223,7 @@ ipcMain.handle("login", async (event, credentials) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Transaction-ID": process.env.TRANSACTION_ID,
+        "X-Transaction-ID": b128da207a1804a457a42ab7d998c15f97ba54d7b842e0cba5e6a3f5ec542a13,
       },
       body: JSON.stringify(credentials),
     });

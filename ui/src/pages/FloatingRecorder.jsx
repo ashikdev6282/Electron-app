@@ -165,11 +165,7 @@ export default function FloatingRecorder() {
           {isRecording ? <Square size={18} /> : <Mic size={18} />}
         </IconButton>
 
-        <IconButton
-          onClick={handleSend}
-          bg="#4f46e5"
-          shortcut="F8"
-        >
+        <IconButton onClick={handleSend} bg="#4f46e5" shortcut="F8">
           <Send size={18} />
         </IconButton>
       </div>
@@ -177,9 +173,19 @@ export default function FloatingRecorder() {
       {/* MAXIMIZE */}
       <div style={{ WebkitAppRegion: "no-drag" }}>
         <IconButton
-          onClick={() => window.electronAPI.openMainWindow("normal")}
-          bg="#27272a"
-          style={{ marginLeft: 6 }}
+          onClick={() => {
+            if (isRecording) return; // 🚫 block when recording
+            window.electronAPI.openMainWindow("normal");
+          }}
+          bg={isRecording ? "#555" : "#27272a"}
+          style={{
+            marginLeft: 6,
+            cursor: isRecording ? "not-allowed" : "pointer",
+            opacity: isRecording ? 0.5 : 1,
+          }}
+          title={
+            isRecording ? "Stop recording to open Dictate" : "Open Dictate"
+          }
         >
           <Maximize2 size={18} />
         </IconButton>

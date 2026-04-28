@@ -68,6 +68,11 @@ onTriggerSendFlow: (callback) => {
   });
 },
 
+onShowWarning: (callback) => {
+  ipcRenderer.removeAllListeners("show-warning");
+  ipcRenderer.on("show-warning", (_, msg) => callback(msg));
+},
+
 
 
 onNavigate: (callback) => {

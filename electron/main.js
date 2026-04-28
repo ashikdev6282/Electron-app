@@ -81,6 +81,7 @@ function createMainWindow() {
     show: false,
     backgroundColor: "#0f0f0f",
     resizable: true,
+    minimizable: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -102,6 +103,19 @@ function createMainWindow() {
   });
 
   mainWindow.on("minimize", (e) => {
+    // 🚫 BLOCK when recording
+    if (recorderState.isRecording) {
+      e.preventDefault();
+
+      mainWindow.webContents.send(
+        "show-warning",
+        "Stop recording before minimizing",
+      );
+
+      return;
+    }
+
+    // ✅ NORMAL FLOW (your existing behavior)
     e.preventDefault();
     mainWindow.hide();
 
@@ -323,6 +337,10 @@ ipcMain.on("recorder:start", () => {
   recorderState.isRecording = true;
   recorderState.isPaused = false;
 
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setMinimizable(false);
+  }
+
   startTime = Date.now() - recorderState.seconds * 1000;
 
   clearInterval(timerInterval);
@@ -340,6 +358,10 @@ ipcMain.on("recorder:start", () => {
 ipcMain.on("recorder:stop", () => {
   recorderState.isRecording = false;
   recorderState.isPaused = false;
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setMinimizable(true);
+  }
 
   clearInterval(timerInterval);
 

@@ -254,6 +254,14 @@ export default function Dictate() {
     });
   }, []);
 
+  useEffect(() => {
+  if (!window.electronAPI?.onShowWarning) return;
+
+  window.electronAPI.onShowWarning((msg) => {
+    toast.warning(msg);
+  });
+}, []);
+
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">
       <div className="relative text-center">

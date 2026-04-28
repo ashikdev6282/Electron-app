@@ -3,8 +3,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("electronAPI", {
   /* ----------- WINDOW / FLOW ----------- */
 
-  openMainWindow: () => {
-    ipcRenderer.send("open-main-window");
+  openMainWindow: (type = "normal") => {
+    ipcRenderer.send("open-main-window", type);
   },
 
   startRecorder: () => {
@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   recorderPause: () => ipcRenderer.send("recorder:pause"),
   recorderResume: () => ipcRenderer.send("recorder:resume"),
   recorderReset: () => ipcRenderer.send("recorder:reset"),
+  recorderForceStop: () => ipcRenderer.send("recorder:force-stop"),
 
   onRecorderUpdate: (callback) => {
     ipcRenderer.removeAllListeners("recorder:update"); // prevent duplicates
@@ -40,48 +41,52 @@ contextBridge.exposeInMainWorld("electronAPI", {
     });
   },
 
-
   /* ----------- ⌨ GLOBAL SHORTCUTS ----------- */
 
-onShortcut: (callback) => {
-  ipcRenderer.removeAllListeners("shortcut:record");
-  ipcRenderer.removeAllListeners("shortcut:stop");
-  ipcRenderer.removeAllListeners("shortcut:send");
+  onShortcut: (callback) => {
+    ipcRenderer.removeAllListeners("shortcut:record");
+    ipcRenderer.removeAllListeners("shortcut:stop");
+    ipcRenderer.removeAllListeners("shortcut:send");
 
-  ipcRenderer.on("shortcut:record", () => callback("record"));
-  ipcRenderer.on("shortcut:stop", () => callback("stop"));
-  ipcRenderer.on("shortcut:send", () => callback("send"));
-},
+    ipcRenderer.on("shortcut:record", () => callback("record"));
+    ipcRenderer.on("shortcut:stop", () => callback("stop"));
+    ipcRenderer.on("shortcut:send", () => callback("send"));
+  },
 
   onRecorderFinished: (callback) => {
-  ipcRenderer.removeAllListeners("recorder:finished");
-  ipcRenderer.on("recorder:finished", () => {
-    callback();
-  });
-},
+    ipcRenderer.on("recorder:finished", () => {
+      callback();
+    });
+  },
 
+  onTriggerSendFlow: (callback) => {
+    ipcRenderer.on("trigger-send-flow", () => {
+      callback();
+    });
+  },
 
-onTriggerSendFlow: (callback) => {
-  ipcRenderer.removeAllListeners("trigger-send-flow");
-  ipcRenderer.on("trigger-send-flow", () => {
-    callback();
-  });
-},
-
-
-
-onNavigate: (callback) => {
-  ipcRenderer.on("navigate", (_, route) => {
-    callback(route);
-  });
+  onNavigate: (callback) => {
+    ipcRenderer.on("navigate", (_, route) => {
+      callback(route);
+    });
+  },
+  
+  onForceStop: (callback) => {
+  ipcRenderer.removeAllListeners("force-stop-recorder");
+  ipcRenderer.on("force-stop-recorder", () => callback());
 },
 
   setRecordedChunks: (chunks) => {
     ipcRenderer.send("set-recorded-chunks", chunks);
   },
 
-  getRecordedChunks: () => {
-    return ipcRenderer.invoke("get-recorded-chunks");
+  getRecordedChunks: async () => {
+    const chunks = await ipcRenderer.invoke("get-recorded-chunks");
+
+    if (!chunks) return [];
+
+    // 🔥 ensure consistent format
+    return chunks.map((chunk) => new Uint8Array(chunk));
   },
 
   clearRecordedChunks: () => {

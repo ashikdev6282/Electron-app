@@ -33,13 +33,20 @@ export default function Dictate() {
   //  REPLACE YOUR useEffect WITH THIS
 
   useEffect(() => {
+    let retryCount = 0;
+
     const loadChunks = async () => {
       try {
         const rawChunks = await window.electronAPI.getRecordedChunks();
 
-        console.log("RECEIVED RAW CHUNKS:", rawChunks);
-
-        if (!rawChunks || !rawChunks.length) return;
+        if (!rawChunks || !rawChunks.length) {
+          // 🔥 retry (max 5 times)
+          if (retryCount < 5) {
+            retryCount++;
+            setTimeout(loadChunks, 150);
+          }
+          return;
+        }
 
         // 🔥 convert back to Uint8Array
         const reconstructed = rawChunks.map((chunkArray) => {
@@ -48,7 +55,6 @@ export default function Dictate() {
 
         chunksRef.current = reconstructed;
 
-        // 🔥 rebuild blob correctly
         const blob = new Blob(reconstructed, {
           type: "audio/webm",
         });
@@ -56,17 +62,19 @@ export default function Dictate() {
         const url = URL.createObjectURL(blob);
 
         setAudioUrl(url);
+        audioRef.current = new Audio(url);
       } catch (err) {
         console.error("Load chunks error:", err);
       }
     };
 
-    // ✅ RUN ON MOUNT
+    // 🔥 RUN ON MOUNT
     loadChunks();
 
-    // ✅ RUN AFTER RECORDING FINISH
+    // 🔥 RUN AFTER STOP
     if (window.electronAPI?.onRecorderFinished) {
       window.electronAPI.onRecorderFinished(() => {
+        retryCount = 0; // reset
         loadChunks();
       });
     }
@@ -83,6 +91,7 @@ export default function Dictate() {
   const handleRecord = async () => {
     if (isRecording) {
       mediaRecorderRef.current?.stop();
+      window.electronAPI.recorderForceStop();
       window.electronAPI.recorderStop();
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({

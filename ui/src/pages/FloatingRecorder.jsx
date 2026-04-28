@@ -24,7 +24,6 @@ export default function FloatingRecorder() {
     try {
       if (isRecording) {
         mediaRecorderRef.current?.stop();
-        window.electronAPI.recorderStop();
       } else {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -58,6 +57,8 @@ export default function FloatingRecorder() {
           }
 
           window.electronAPI.setRecordedChunks(buffers);
+
+          window.electronAPI.recorderStop();
         };
 
         recorder.start(200);
@@ -82,7 +83,7 @@ export default function FloatingRecorder() {
     }
 
     setTimeout(() => {
-      window.electronAPI.openMainWindow();
+      window.electronAPI.openMainWindow("send");
     }, 150);
   };
 
@@ -109,6 +110,16 @@ export default function FloatingRecorder() {
 
         default:
           break;
+      }
+    });
+  }, [isRecording]);
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    window.electronAPI.onForceStop?.(() => {
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop(); // 🔥 THIS triggers chunks save
       }
     });
   }, [isRecording]);
@@ -217,7 +228,7 @@ export default function FloatingRecorder() {
       {/* MAXIMIZE */}
       <div style={{ WebkitAppRegion: "no-drag" }}>
         <IconButton
-          onClick={() => window.electronAPI.openMainWindow()}
+          onClick={() => window.electronAPI.openMainWindow("normal")}
           bg="#27272a"
           style={{ marginLeft: 6 }}
         >

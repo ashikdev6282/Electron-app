@@ -208,22 +208,18 @@ ipcMain.on("start-recorder", () => {
   floatingWindow.focus();
 });
 
-ipcMain.on("open-main-window", () => {
+ipcMain.on("open-main-window", (event, type = "normal") => {
   if (floatingWindow) floatingWindow.hide();
 
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();
 
-    // 🔥 DO NOT reload the app
     mainWindow.webContents.send("navigate", "dictate");
 
-    mainWindow.webContents.send("trigger-send-flow");
-
-    // 🔥 force sync after open
-    setTimeout(() => {
-      mainWindow.webContents.send("recorder:finished");
-    }, 100);
+    if (type === "send") {
+      mainWindow.webContents.send("trigger-send-flow");
+    }
 
     broadcastRecorderState();
   }
@@ -340,16 +336,24 @@ ipcMain.on("recorder:stop", () => {
   recorderState.isPaused = false;
 
   clearInterval(timerInterval);
+
   broadcastRecorderState();
 
-  // 🔥 IMPORTANT: notify both windows
-  mainWindow?.webContents.send("recorder:finished");
-  floatingWindow?.webContents.send("recorder:finished");
+  // ❌ DO NOT send recorder:finished here
 });
 
 /* 🔥 STORE AUDIO */
 ipcMain.on("set-recorded-chunks", (event, chunks) => {
   recordedChunksGlobal = chunks;
+
+  // 🔥 Immediately notify UI AFTER chunks ready
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("recorder:finished");
+  }
+
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.webContents.send("recorder:finished");
+  }
 });
 
 /* 🔥 GET AUDIO */
@@ -378,6 +382,12 @@ ipcMain.on("recorder:reset", () => {
   recordedChunksGlobal = [];
 
   broadcastRecorderState();
+});
+
+
+ipcMain.on("recorder:force-stop", () => {
+  // 🔥 tell floating window to stop its MediaRecorder
+  floatingWindow?.webContents.send("force-stop-recorder");
 });
 
 /* ---------------- AUDIO ---------------- */

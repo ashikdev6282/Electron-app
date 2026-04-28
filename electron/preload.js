@@ -4,8 +4,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /* ----------- WINDOW / FLOW ----------- */
 
   openMainWindow: (type = "normal") => {
-    ipcRenderer.send("open-main-window", type);
-  },
+  ipcRenderer.send("open-main-window", type);
+},
 
   startRecorder: () => {
     ipcRenderer.send("start-recorder");
@@ -32,7 +32,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   recorderPause: () => ipcRenderer.send("recorder:pause"),
   recorderResume: () => ipcRenderer.send("recorder:resume"),
   recorderReset: () => ipcRenderer.send("recorder:reset"),
-  recorderForceStop: () => ipcRenderer.send("recorder:force-stop"),
 
   onRecorderUpdate: (callback) => {
     ipcRenderer.removeAllListeners("recorder:update"); // prevent duplicates
@@ -41,52 +40,48 @@ contextBridge.exposeInMainWorld("electronAPI", {
     });
   },
 
+
   /* ----------- ⌨ GLOBAL SHORTCUTS ----------- */
 
-  onShortcut: (callback) => {
-    ipcRenderer.removeAllListeners("shortcut:record");
-    ipcRenderer.removeAllListeners("shortcut:stop");
-    ipcRenderer.removeAllListeners("shortcut:send");
+onShortcut: (callback) => {
+  ipcRenderer.removeAllListeners("shortcut:record");
+  ipcRenderer.removeAllListeners("shortcut:stop");
+  ipcRenderer.removeAllListeners("shortcut:send");
 
-    ipcRenderer.on("shortcut:record", () => callback("record"));
-    ipcRenderer.on("shortcut:stop", () => callback("stop"));
-    ipcRenderer.on("shortcut:send", () => callback("send"));
-  },
+  ipcRenderer.on("shortcut:record", () => callback("record"));
+  ipcRenderer.on("shortcut:stop", () => callback("stop"));
+  ipcRenderer.on("shortcut:send", () => callback("send"));
+},
 
   onRecorderFinished: (callback) => {
-    ipcRenderer.on("recorder:finished", () => {
-      callback();
-    });
-  },
+  ipcRenderer.removeAllListeners("recorder:finished");
+  ipcRenderer.on("recorder:finished", () => {
+    callback();
+  });
+},
 
-  onTriggerSendFlow: (callback) => {
-    ipcRenderer.on("trigger-send-flow", () => {
-      callback();
-    });
-  },
 
-  onNavigate: (callback) => {
-    ipcRenderer.on("navigate", (_, route) => {
-      callback(route);
-    });
-  },
-  
-  onForceStop: (callback) => {
-  ipcRenderer.removeAllListeners("force-stop-recorder");
-  ipcRenderer.on("force-stop-recorder", () => callback());
+onTriggerSendFlow: (callback) => {
+  ipcRenderer.removeAllListeners("trigger-send-flow");
+  ipcRenderer.on("trigger-send-flow", () => {
+    callback();
+  });
+},
+
+
+
+onNavigate: (callback) => {
+  ipcRenderer.on("navigate", (_, route) => {
+    callback(route);
+  });
 },
 
   setRecordedChunks: (chunks) => {
     ipcRenderer.send("set-recorded-chunks", chunks);
   },
 
-  getRecordedChunks: async () => {
-    const chunks = await ipcRenderer.invoke("get-recorded-chunks");
-
-    if (!chunks) return [];
-
-    // 🔥 ensure consistent format
-    return chunks.map((chunk) => new Uint8Array(chunk));
+  getRecordedChunks: () => {
+    return ipcRenderer.invoke("get-recorded-chunks");
   },
 
   clearRecordedChunks: () => {
@@ -134,4 +129,97 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveAudio: (buffer) => {
     ipcRenderer.send("save-audio", buffer);
   },
+});
+
+
+
+
+/* ================= 🎙 SHARED RECORDER ENGINE ================= */
+
+let mediaRecorder = null;
+let chunks = [];
+let stream = null;
+let isRecordingInternal = false;
+
+async function startRecording() {
+  try {
+    if (isRecordingInternal) return;
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        sampleRate: 48000,
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: "audio/webm;codecs=opus",
+    });
+
+    chunks = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunks.push(e.data);
+      }
+    };
+
+    mediaRecorder.start(200);
+    isRecordingInternal = true;
+
+    ipcRenderer.send("recorder:start");
+  } catch (err) {
+    console.error("Start recording error:", err);
+  }
+}
+
+async function stopRecording() {
+  return new Promise((resolve) => {
+    try {
+      if (!mediaRecorder || !isRecordingInternal) {
+        resolve([]);
+        return;
+      }
+
+      mediaRecorder.onstop = async () => {
+        const buffers = [];
+
+        for (const chunk of chunks) {
+          const arrayBuffer = await chunk.arrayBuffer();
+          buffers.push(Array.from(new Uint8Array(arrayBuffer)));
+        }
+
+        // 🔥 Save globally
+        ipcRenderer.send("set-recorded-chunks", buffers);
+
+        // 🔥 Notify main process
+        ipcRenderer.send("recorder:stop");
+
+        // cleanup
+        mediaRecorder = null;
+        chunks = [];
+        isRecordingInternal = false;
+
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+          stream = null;
+        }
+
+        resolve(buffers);
+      };
+
+      mediaRecorder.stop();
+    } catch (err) {
+      console.error("Stop recording error:", err);
+      resolve([]);
+    }
+  });
+}
+
+contextBridge.exposeInMainWorld("sharedRecorder", {
+  start: startRecording,
+  stop: stopRecording,
 });

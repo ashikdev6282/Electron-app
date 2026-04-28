@@ -6,8 +6,6 @@ export default function FloatingRecorder() {
   const { isRecording, seconds } = useRecorderSync();
   const username = localStorage.getItem("username") || "Unknown";
 
-  const chunksRef = useRef([]);
-  const mediaRecorderRef = useRef(null);
   const isBusyRef = useRef(false);
 
   const formatTime = () => {
@@ -16,53 +14,16 @@ export default function FloatingRecorder() {
     return `${mins}:${secs}`;
   };
 
-  /* 🎙 RECORD / STOP */
+  /* 🎙 RECORD / STOP (UPDATED) */
   const handleRecord = async () => {
     if (isBusyRef.current) return;
     isBusyRef.current = true;
 
     try {
       if (isRecording) {
-        mediaRecorderRef.current?.stop();
+        await window.sharedRecorder.stop(); // 🔥 STOP SHARED
       } else {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: 48000,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
-
-        const recorder = new MediaRecorder(stream, {
-          mimeType: "audio/webm;codecs=opus",
-        });
-
-        mediaRecorderRef.current = recorder;
-        chunksRef.current = [];
-
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-
-        recorder.onstop = async () => {
-          if (!chunksRef.current.length) return;
-
-          const buffers = [];
-
-          for (const chunk of chunksRef.current) {
-            const arrayBuffer = await chunk.arrayBuffer();
-            buffers.push(Array.from(new Uint8Array(arrayBuffer)));
-          }
-
-          window.electronAPI.setRecordedChunks(buffers);
-
-          window.electronAPI.recorderStop();
-        };
-
-        recorder.start(200);
-        window.electronAPI.recorderStart();
+        await window.sharedRecorder.start(); // 🔥 START SHARED
       }
     } catch (err) {
       console.error("Recording error:", err);
@@ -74,12 +35,11 @@ export default function FloatingRecorder() {
   };
 
   /* 📤 SEND */
-  const handleSend = () => {
+  const handleSend = async () => {
     if (seconds === 0) return;
 
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
-      window.electronAPI.recorderStop();
+      await window.sharedRecorder.stop(); // 🔥 ensure stop
     }
 
     setTimeout(() => {
@@ -99,8 +59,7 @@ export default function FloatingRecorder() {
 
         case "stop":
           if (isRecording) {
-            mediaRecorderRef.current?.stop();
-            window.electronAPI.recorderStop();
+            window.sharedRecorder.stop();
           }
           break;
 
@@ -110,16 +69,6 @@ export default function FloatingRecorder() {
 
         default:
           break;
-      }
-    });
-  }, [isRecording]);
-
-  useEffect(() => {
-    if (!window.electronAPI) return;
-
-    window.electronAPI.onForceStop?.(() => {
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop(); // 🔥 THIS triggers chunks save
       }
     });
   }, [isRecording]);
@@ -211,7 +160,7 @@ export default function FloatingRecorder() {
         <IconButton
           onClick={handleRecord}
           bg={isRecording ? "#dc2626" : "#ef4444"}
-          shortcut={isRecording ? "F10" : "F9"} // ✅ FIXED
+          shortcut={isRecording ? "F10" : "F9"}
         >
           {isRecording ? <Square size={18} /> : <Mic size={18} />}
         </IconButton>
@@ -219,7 +168,7 @@ export default function FloatingRecorder() {
         <IconButton
           onClick={handleSend}
           bg="#4f46e5"
-          shortcut="F8" // ✅ FIXED
+          shortcut="F8"
         >
           <Send size={18} />
         </IconButton>

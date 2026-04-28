@@ -91,8 +91,6 @@ export default function Dictate() {
   const handleRecord = async () => {
     if (isRecording) {
       mediaRecorderRef.current?.stop();
-      window.electronAPI.recorderForceStop();
-      window.electronAPI.recorderStop();
     } else {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -116,16 +114,26 @@ export default function Dictate() {
       };
 
       recorder.onstop = async () => {
-        await new Promise((res) => setTimeout(res, 100));
-
         if (!chunksRef.current.length) {
           console.error("❌ No chunks recorded");
           return;
         }
 
-        window.electronAPI.setRecordedChunks([...chunksRef.current]);
+        // 🔥 Convert properly like floating
+        const buffers = [];
 
-        // preview still uses webm
+        for (const chunk of chunksRef.current) {
+          const arrayBuffer = await chunk.arrayBuffer();
+          buffers.push(Array.from(new Uint8Array(arrayBuffer)));
+        }
+
+        // 🔥 Save globally FIRST
+        window.electronAPI.setRecordedChunks(buffers);
+
+        // 🔥 THEN stop recorder state (VERY IMPORTANT)
+        window.electronAPI.recorderStop();
+
+        // 🔥 UI preview
         const blob = new Blob(chunksRef.current, {
           type: "audio/webm",
         });

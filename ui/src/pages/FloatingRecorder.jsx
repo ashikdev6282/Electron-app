@@ -218,27 +218,6 @@ function IconButton({ children, onClick, bg, style, shortcut }) {
       >
         {children}
       </button>
-
-      {shortcut && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: -4,
-            right: -4,
-            background: "#111",
-            border: "1px solid #374151",
-            color: "#9ca3af",
-            fontSize: 9,
-            fontWeight: 500,
-            padding: "2px 5px",
-            borderRadius: 4,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
-            pointerEvents: "none",
-          }}
-        >
-          {shortcut}
-        </div>
-      )}
     </div>
   );
 }

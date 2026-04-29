@@ -31,6 +31,7 @@ if (fs.existsSync(envPath)) {
 
 let mainWindow = null;
 let floatingWindow = null;
+let isUserLoggedIn = false;
 
 /* 🔥 GLOBAL AUDIO STORAGE */
 let recordedChunksGlobal = [];
@@ -103,6 +104,11 @@ function createMainWindow() {
   });
 
   mainWindow.on("minimize", (e) => {
+    // ❌ NOT LOGGED IN → normal minimize (NO floating)
+    if (!isUserLoggedIn) {
+      mainWindow.minimize(); // real minimize
+      return;
+    }
     // 🚫 BLOCK when recording
     if (recorderState.isRecording) {
       e.preventDefault();
@@ -116,7 +122,6 @@ function createMainWindow() {
     }
 
     // ✅ NORMAL FLOW (your existing behavior)
-    e.preventDefault();
     mainWindow.hide();
 
     if (!floatingWindow) createFloatingWindow();
@@ -269,6 +274,7 @@ ipcMain.handle("login", async (event, credentials) => {
 
     if (data.success) {
       global.userSession = data.data;
+      isUserLoggedIn = true;
     } else {
       return { success: false, message: data.message };
     }
@@ -359,7 +365,7 @@ ipcMain.on("recorder:stop", () => {
   recorderState.isRecording = false;
   recorderState.isPaused = false;
 
-    if (mainWindow && !mainWindow.isDestroyed()) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setMinimizable(true);
   }
 

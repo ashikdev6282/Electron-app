@@ -48,30 +48,29 @@ export default function FloatingRecorder() {
   };
 
   /* ⌨️ SHORTCUT SYNC */
-  useEffect(() => {
-    if (!window.electronAPI) return;
+ useEffect(() => {
+  if (!window.electronAPI) return;
 
-    window.electronAPI.onShortcut((action) => {
-      switch (action) {
-        case "record":
-          if (!isRecording) handleRecord();
-          break;
+  window.electronAPI.onShortcut((action) => {
+    switch (action) {
+      case "record":
+        // 🔥 TOGGLE LOGIC
+        if (isRecording) {
+          window.electronAPI.recorderStop();
+        } else {
+          window.electronAPI.recorderStart();
+        }
+        break;
 
-        case "stop":
-          if (isRecording) {
-            window.sharedRecorder.stop();
-          }
-          break;
+      case "send":
+        handleSend();
+        break;
 
-        case "send":
-          handleSend();
-          break;
-
-        default:
-          break;
-      }
-    });
-  }, [isRecording]);
+      default:
+        break;
+    }
+  });
+}, [isRecording]);
 
   return (
     <div

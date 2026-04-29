@@ -200,17 +200,16 @@ app.whenReady().then(() => {
 
   /*  GLOBAL SHORTCUTS */
 
-  globalShortcut.register("F9", () => {
+  globalShortcut.unregisterAll(); // 🔥 important to avoid duplicate
+
+  // 🎙 F8 → Record / Stop (toggle)
+  globalShortcut.register("F8", () => {
     mainWindow?.webContents.send("shortcut:record");
     floatingWindow?.webContents.send("shortcut:record");
   });
 
-  globalShortcut.register("F10", () => {
-    mainWindow?.webContents.send("shortcut:stop");
-    floatingWindow?.webContents.send("shortcut:stop");
-  });
-
-  globalShortcut.register("F8", () => {
+  // 📤 F9 → Send
+  globalShortcut.register("F9", () => {
     mainWindow?.webContents.send("shortcut:send");
     floatingWindow?.webContents.send("shortcut:send");
   });

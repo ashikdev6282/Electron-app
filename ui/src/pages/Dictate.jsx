@@ -229,6 +229,7 @@ export default function Dictate() {
     }
   };
 
+  /*  SEND FLOW */
   const handleSendFlow = () => {
     const user = JSON.parse(localStorage.getItem("user"));
 
@@ -246,6 +247,7 @@ export default function Dictate() {
     }, 200);
   };
 
+  /*  WARNING FROM MAIN */
   useEffect(() => {
     if (!window.electronAPI?.onTriggerSendFlow) return;
 
@@ -261,6 +263,28 @@ export default function Dictate() {
     toast.warning(msg);
   });
 }, []);
+
+
+/*  SHORTCUTS SYNC */
+useEffect(() => {
+  if (!window.electronAPI?.onShortcut) return;
+
+  window.electronAPI.onShortcut((action) => {
+    switch (action) {
+      case "record":
+        // 🔥 TOGGLE RECORD / STOP
+        handleRecord();
+        break;
+
+      case "send":
+        handleSendFlow();
+        break;
+
+      default:
+        break;
+    }
+  });
+}, [isRecording]);
 
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 
 const functionKeys = [
   "F1","F2","F3","F4","F5","F6",
@@ -25,6 +26,8 @@ export default function HotkeyPopup({ isOpen, onClose }) {
     });
 
     setError("");
+
+    toast.success(`Hotkeys updated: ${recordKey} (Record) / ${sendKey} (Send)`);
     onClose();
   };
 

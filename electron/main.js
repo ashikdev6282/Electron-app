@@ -200,16 +200,7 @@ function createFloatingWindow() {
   });
 }
 
-/* ---------------- APP READY ---------------- */
-Menu.setApplicationMenu(null);
-
-app.whenReady().then(() => {
-  createMainWindow();
-  registerShortcuts();
-
-  /*  GLOBAL SHORTCUTS */
-
- function registerShortcuts() {
+function registerShortcuts() {
   globalShortcut.unregisterAll();
 
   globalShortcut.register(shortcuts.record, () => {
@@ -222,6 +213,13 @@ app.whenReady().then(() => {
     floatingWindow?.webContents.send("shortcut:send");
   });
 }
+
+/* ---------------- APP READY ---------------- */
+Menu.setApplicationMenu(null);
+
+app.whenReady().then(() => {
+  createMainWindow();
+  registerShortcuts();
 });
 
 /* ---------------- WINDOW FLOW ---------------- */

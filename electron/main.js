@@ -8,7 +8,7 @@ const {
   screen,
   globalShortcut,
 } = require("electron");
-const Store = require("electron-store");
+const Store = require("electron-store").default;
 
 const store = new Store();
 

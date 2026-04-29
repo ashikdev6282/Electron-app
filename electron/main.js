@@ -8,6 +8,9 @@ const {
   screen,
   globalShortcut,
 } = require("electron");
+const Store = require("electron-store");
+
+const store = new Store();
 
 const path = require("path");
 const fs = require("fs");
@@ -32,10 +35,11 @@ if (fs.existsSync(envPath)) {
 let mainWindow = null;
 let floatingWindow = null;
 let isUserLoggedIn = false;
-let shortcuts = {
+
+let shortcuts = store.get("shortcuts", {
   record: "F8",
   send: "F9",
-};
+});
 
 /* 🔥 GLOBAL AUDIO STORAGE */
 let recordedChunksGlobal = [];
@@ -443,6 +447,9 @@ ipcMain.handle("get-system-audio", async () => {
 
 ipcMain.on("update-shortcuts", (event, newKeys) => {
   shortcuts = newKeys;
+
+  store.set("shortcuts", newKeys);
+
   registerShortcuts();
 });
 

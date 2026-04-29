@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
+    "electron-store": "^11.0.2",
     "lucide-react": "^0.575.0",
     "node-fetch": "^2.7.0"
   },

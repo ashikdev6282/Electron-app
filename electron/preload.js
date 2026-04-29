@@ -52,6 +52,9 @@ onShortcut: (callback) => {
   ipcRenderer.on("shortcut:stop", () => callback("stop"));
   ipcRenderer.on("shortcut:send", () => callback("send"));
 },
+updateShortcuts: (keys) => {
+  ipcRenderer.send("update-shortcuts", keys);
+},
 
   onRecorderFinished: (callback) => {
   ipcRenderer.removeAllListeners("recorder:finished");

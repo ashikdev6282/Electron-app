@@ -32,6 +32,10 @@ if (fs.existsSync(envPath)) {
 let mainWindow = null;
 let floatingWindow = null;
 let isUserLoggedIn = false;
+let shortcuts = {
+  record: "F8",
+  send: "F9",
+};
 
 /* 🔥 GLOBAL AUDIO STORAGE */
 let recordedChunksGlobal = [];
@@ -197,22 +201,23 @@ Menu.setApplicationMenu(null);
 
 app.whenReady().then(() => {
   createMainWindow();
+  registerShortcuts();
 
   /*  GLOBAL SHORTCUTS */
 
-  globalShortcut.unregisterAll(); // 🔥 important to avoid duplicate
+ function registerShortcuts() {
+  globalShortcut.unregisterAll();
 
-  // 🎙 F8 → Record / Stop (toggle)
-  globalShortcut.register("F8", () => {
+  globalShortcut.register(shortcuts.record, () => {
     mainWindow?.webContents.send("shortcut:record");
     floatingWindow?.webContents.send("shortcut:record");
   });
 
-  // 📤 F9 → Send
-  globalShortcut.register("F9", () => {
+  globalShortcut.register(shortcuts.send, () => {
     mainWindow?.webContents.send("shortcut:send");
     floatingWindow?.webContents.send("shortcut:send");
   });
+}
 });
 
 /* ---------------- WINDOW FLOW ---------------- */
@@ -434,6 +439,11 @@ ipcMain.handle("get-system-audio", async () => {
   });
 
   return sources[0]?.id;
+});
+
+ipcMain.on("update-shortcuts", (event, newKeys) => {
+  shortcuts = newKeys;
+  registerShortcuts();
 });
 
 /* ---------------- APP BEHAVIOR ---------------- */

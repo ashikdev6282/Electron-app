@@ -1,11 +1,19 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, HelpCircle } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  HelpCircle,
+  Settings,
+} from "lucide-react";
 import useRecorderSync from "../hooks/useRecorderSync";
 import Waveform from "../components/Waveform";
 import LiveWave from "../components/LiveWave";
 import FileNamePopup from "../components/FileNamePopup";
 import { convertWebmToWav } from "../utils/audioConverter";
 import DiscardPopup from "../components/DiscardPopup";
+import HotkeyPopup from "../components/HotkeyPopup";
 import { toast } from "sonner";
 
 export default function Dictate() {
@@ -29,6 +37,7 @@ export default function Dictate() {
 
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showHotkeyPopup, setShowHotkeyPopup] = useState(false);
 
   //  REPLACE YOUR useEffect WITH THIS
 
@@ -257,38 +266,45 @@ export default function Dictate() {
   }, []);
 
   useEffect(() => {
-  if (!window.electronAPI?.onShowWarning) return;
+    if (!window.electronAPI?.onShowWarning) return;
 
-  window.electronAPI.onShowWarning((msg) => {
-    toast.warning(msg);
-  });
-}, []);
+    window.electronAPI.onShowWarning((msg) => {
+      toast.warning(msg);
+    });
+  }, []);
 
+  /*  SHORTCUTS SYNC */
+  useEffect(() => {
+    if (!window.electronAPI?.onShortcut) return;
 
-/*  SHORTCUTS SYNC */
-useEffect(() => {
-  if (!window.electronAPI?.onShortcut) return;
+    window.electronAPI.onShortcut((action) => {
+      switch (action) {
+        case "record":
+          // 🔥 TOGGLE RECORD / STOP
+          handleRecord();
+          break;
 
-  window.electronAPI.onShortcut((action) => {
-    switch (action) {
-      case "record":
-        // 🔥 TOGGLE RECORD / STOP
-        handleRecord();
-        break;
+        case "send":
+          handleSendFlow();
+          break;
 
-      case "send":
-        handleSendFlow();
-        break;
-
-      default:
-        break;
-    }
-  });
-}, [isRecording]);
+        default:
+          break;
+      }
+    });
+  }, [isRecording]);
 
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">
       <div className="relative text-center">
+        {/* ⚙ SETTINGS (LEFT) */}
+        <button
+          onClick={() => setShowHotkeyPopup(true)}
+          className="absolute left-0 top-0 text-gray-400 hover:text-white transition"
+          title="Hotkey Settings"
+        >
+          <Settings size={20} />
+        </button>
         <button
           onClick={() => {
             // 👉 open help link OR modal
@@ -497,6 +513,11 @@ useEffect(() => {
           uploadRecording(name);
           setShowNamePopup(false);
         }}
+      />
+
+      <HotkeyPopup
+        isOpen={showHotkeyPopup}
+        onClose={() => setShowHotkeyPopup(false)}
       />
     </div>
   );

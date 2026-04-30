@@ -71,6 +71,11 @@ onTriggerSendFlow: (callback) => {
   });
 },
 
+onForceStop: (callback) => {
+  ipcRenderer.removeAllListeners("force-stop-recorder");
+  ipcRenderer.on("force-stop-recorder", () => callback());
+},
+
 onShowWarning: (callback) => {
   ipcRenderer.removeAllListeners("show-warning");
   ipcRenderer.on("show-warning", (_, msg) => callback(msg));

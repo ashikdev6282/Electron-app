@@ -275,24 +275,31 @@ export default function Dictate() {
 
   /*  SHORTCUTS SYNC */
   useEffect(() => {
-    if (!window.electronAPI?.onShortcut) return;
+  if (!window.electronAPI?.onShortcut) return;
 
-    window.electronAPI.onShortcut((action) => {
-      switch (action) {
-        case "record":
-          // 🔥 TOGGLE RECORD / STOP
-          handleRecord();
-          break;
+  window.electronAPI.onShortcut((action) => {
+    switch (action) {
+      case "record":
+        handleRecord(); // ✅ toggle handled here
+        break;
 
-        case "send":
-          handleSendFlow();
-          break;
+      // ❌ DO NOTHING for send
+      default:
+        break;
+    }
+  });
+}, [isRecording]);
 
-        default:
-          break;
-      }
-    });
-  }, [isRecording]);
+/* 🔥 FORCE STOP (FROM MAIN - F9 FIX) */
+useEffect(() => {
+  if (!window.electronAPI?.onForceStop) return;
+
+  window.electronAPI.onForceStop(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop(); // ✅ REAL STOP
+    }
+  });
+}, [isRecording]);
 
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">

@@ -54,7 +54,7 @@ export default function FloatingRecorder() {
   window.electronAPI.onShortcut((action) => {
     switch (action) {
       case "record":
-        // 🔥 TOGGLE LOGIC
+        // 🔥 TOGGLE RECORD
         if (isRecording) {
           window.electronAPI.recorderStop();
         } else {
@@ -62,15 +62,31 @@ export default function FloatingRecorder() {
         }
         break;
 
-      case "send":
-        handleSend();
-        break;
-
+      // ❌ DO NOTHING FOR SEND HERE
       default:
         break;
     }
   });
 }, [isRecording]);
+
+/* 🔥 FORCE STOP (FROM MAIN PROCESS - F9 FIX) */
+useEffect(() => {
+  if (!window.electronAPI?.onForceStop) return;
+
+  window.electronAPI.onForceStop(() => {
+    if (window.sharedRecorder && isRecording) {
+      window.sharedRecorder.stop(); // ✅ REAL STOP
+    }
+  });
+}, [isRecording]);
+
+useEffect(() => {
+  if (!window.electronAPI?.onTriggerSendFlow) return;
+
+  window.electronAPI.onTriggerSendFlow(() => {
+    handleSendFlow(); // ✅ correct place
+  });
+}, []);
 
   return (
     <div

@@ -203,15 +203,54 @@ function createFloatingWindow() {
 function registerShortcuts() {
   globalShortcut.unregisterAll();
 
+  // 🎙 RECORD (TOGGLE)
   globalShortcut.register(shortcuts.record, () => {
     mainWindow?.webContents.send("shortcut:record");
     floatingWindow?.webContents.send("shortcut:record");
   });
 
+  // 📤 SEND (SMART FLOW)
   globalShortcut.register(shortcuts.send, () => {
-    mainWindow?.webContents.send("shortcut:send");
-    floatingWindow?.webContents.send("shortcut:send");
-  });
+  // 🔥 STEP 1: If recording → stop properly
+  if (recorderState.isRecording) {
+    mainWindow?.webContents.send("force-stop-recorder");
+    floatingWindow?.webContents.send("force-stop-recorder");
+
+    // 🔥 STEP 2: OPEN MAIN WINDOW + SEND FLOW
+    setTimeout(() => {
+      // ✅ THIS IS THE MISSING PIECE
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.webContents.send("navigate", "dictate");
+      }
+
+      if (floatingWindow) {
+        floatingWindow.hide();
+      }
+
+      // ✅ THEN trigger send popup
+      mainWindow?.webContents.send("trigger-send-flow");
+      floatingWindow?.webContents.send("trigger-send-flow");
+    }, 300);
+  } else {
+    // 🔥 NOT RECORDING → JUST OPEN + SEND
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send("navigate", "dictate");
+    }
+
+    if (floatingWindow) {
+      floatingWindow.hide();
+    }
+
+    mainWindow?.webContents.send("trigger-send-flow");
+    floatingWindow?.webContents.send("trigger-send-flow");
+  }
+});
+
+  console.log("✅ Shortcuts registered:", shortcuts);
 }
 
 /* ---------------- APP READY ---------------- */

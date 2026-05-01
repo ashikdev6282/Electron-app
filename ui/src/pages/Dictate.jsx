@@ -64,11 +64,10 @@ export default function Dictate() {
 
         chunksRef.current = reconstructed;
 
-        const blob = new Blob(reconstructed, {
-          type: "audio/webm",
-        });
+        // 🔥 convert merged chunks to WAV (FIXES waveform)
+        const wavBlob = await convertWebmToWav(reconstructed);
 
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(wavBlob);
 
         setAudioUrl(url);
         audioRef.current = new Audio(url);
@@ -116,7 +115,7 @@ export default function Dictate() {
       });
 
       mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
+      // chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -137,17 +136,17 @@ export default function Dictate() {
         }
 
         // 🔥 Save globally FIRST
-        window.electronAPI.setRecordedChunks(buffers);
+        // 🔥 ONLY SAVE CURRENT SESSION
+        // window.electronAPI.setRecordedChunks(buffers);
 
         // 🔥 THEN stop recorder state (VERY IMPORTANT)
         window.electronAPI.recorderStop();
 
         // 🔥 UI preview
-        const blob = new Blob(chunksRef.current, {
-          type: "audio/webm",
-        });
+        // 🔥 convert to WAV for correct waveform preview
+        const wavBlob = await convertWebmToWav(chunksRef.current);
 
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(wavBlob);
         setAudioUrl(url);
       };
 
@@ -275,31 +274,31 @@ export default function Dictate() {
 
   /*  SHORTCUTS SYNC */
   useEffect(() => {
-  if (!window.electronAPI?.onShortcut) return;
+    if (!window.electronAPI?.onShortcut) return;
 
-  window.electronAPI.onShortcut((action) => {
-    switch (action) {
-      case "record":
-        handleRecord(); // ✅ toggle handled here
-        break;
+    window.electronAPI.onShortcut((action) => {
+      switch (action) {
+        case "record":
+          handleRecord(); // ✅ toggle handled here
+          break;
 
-      // ❌ DO NOTHING for send
-      default:
-        break;
-    }
-  });
-}, [isRecording]);
+        // ❌ DO NOTHING for send
+        default:
+          break;
+      }
+    });
+  }, [isRecording]);
 
-/* 🔥 FORCE STOP (FROM MAIN - F9 FIX) */
-useEffect(() => {
-  if (!window.electronAPI?.onForceStop) return;
+  /* 🔥 FORCE STOP (FROM MAIN - F9 FIX) */
+  useEffect(() => {
+    if (!window.electronAPI?.onForceStop) return;
 
-  window.electronAPI.onForceStop(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop(); // ✅ REAL STOP
-    }
-  });
-}, [isRecording]);
+    window.electronAPI.onForceStop(() => {
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop(); // ✅ REAL STOP
+      }
+    });
+  }, [isRecording]);
 
   return (
     <div className="h-screen bg-black text-white flex flex-col gap-4 px-5 py-6">

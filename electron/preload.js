@@ -4,8 +4,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /* ----------- WINDOW / FLOW ----------- */
 
   openMainWindow: (type = "normal") => {
-  ipcRenderer.send("open-main-window", type);
-},
+    ipcRenderer.send("open-main-window", type);
+  },
 
   startRecorder: () => {
     ipcRenderer.send("start-recorder");
@@ -40,54 +40,50 @@ contextBridge.exposeInMainWorld("electronAPI", {
     });
   },
 
-
   /* ----------- ⌨ GLOBAL SHORTCUTS ----------- */
 
-onShortcut: (callback) => {
-  ipcRenderer.removeAllListeners("shortcut:record");
-  ipcRenderer.removeAllListeners("shortcut:stop");
-  ipcRenderer.removeAllListeners("shortcut:send");
+  onShortcut: (callback) => {
+    ipcRenderer.removeAllListeners("shortcut:record");
+    ipcRenderer.removeAllListeners("shortcut:stop");
+    ipcRenderer.removeAllListeners("shortcut:send");
 
-  ipcRenderer.on("shortcut:record", () => callback("record"));
-  ipcRenderer.on("shortcut:stop", () => callback("stop"));
-  ipcRenderer.on("shortcut:send", () => callback("send"));
-},
-updateShortcuts: (keys) => {
-  ipcRenderer.send("update-shortcuts", keys);
-},
+    ipcRenderer.on("shortcut:record", () => callback("record"));
+    ipcRenderer.on("shortcut:stop", () => callback("stop"));
+    ipcRenderer.on("shortcut:send", () => callback("send"));
+  },
+  updateShortcuts: (keys) => {
+    ipcRenderer.send("update-shortcuts", keys);
+  },
 
   onRecorderFinished: (callback) => {
-  ipcRenderer.removeAllListeners("recorder:finished");
-  ipcRenderer.on("recorder:finished", () => {
-    callback();
-  });
-},
+    ipcRenderer.removeAllListeners("recorder:finished");
+    ipcRenderer.on("recorder:finished", () => {
+      callback();
+    });
+  },
 
+  onTriggerSendFlow: (callback) => {
+    ipcRenderer.removeAllListeners("trigger-send-flow");
+    ipcRenderer.on("trigger-send-flow", () => {
+      callback();
+    });
+  },
 
-onTriggerSendFlow: (callback) => {
-  ipcRenderer.removeAllListeners("trigger-send-flow");
-  ipcRenderer.on("trigger-send-flow", () => {
-    callback();
-  });
-},
+  onForceStop: (callback) => {
+    ipcRenderer.removeAllListeners("force-stop-recorder");
+    ipcRenderer.on("force-stop-recorder", () => callback());
+  },
 
-onForceStop: (callback) => {
-  ipcRenderer.removeAllListeners("force-stop-recorder");
-  ipcRenderer.on("force-stop-recorder", () => callback());
-},
+  onShowWarning: (callback) => {
+    ipcRenderer.removeAllListeners("show-warning");
+    ipcRenderer.on("show-warning", (_, msg) => callback(msg));
+  },
 
-onShowWarning: (callback) => {
-  ipcRenderer.removeAllListeners("show-warning");
-  ipcRenderer.on("show-warning", (_, msg) => callback(msg));
-},
-
-
-
-onNavigate: (callback) => {
-  ipcRenderer.on("navigate", (_, route) => {
-    callback(route);
-  });
-},
+  onNavigate: (callback) => {
+    ipcRenderer.on("navigate", (_, route) => {
+      callback(route);
+    });
+  },
 
   setRecordedChunks: (chunks) => {
     ipcRenderer.send("set-recorded-chunks", chunks);
@@ -144,9 +140,6 @@ onNavigate: (callback) => {
   },
 });
 
-
-
-
 /* ================= 🎙 SHARED RECORDER ENGINE ================= */
 
 let mediaRecorder = null;
@@ -198,15 +191,21 @@ async function stopRecording() {
       }
 
       mediaRecorder.onstop = async () => {
-        const buffers = [];
+        const sessionbuffers = [];
 
         for (const chunk of chunks) {
           const arrayBuffer = await chunk.arrayBuffer();
-          buffers.push(Array.from(new Uint8Array(arrayBuffer)));
+          sessionbuffers.push(Array.from(new Uint8Array(arrayBuffer)));
         }
 
         // 🔥 Save globally
-        ipcRenderer.send("set-recorded-chunks", buffers);
+        const existing = await ipcRenderer.invoke("get-recorded-chunks");
+
+        // 🔥 MERGE OLD + NEW
+        const merged = [...(existing || []), ...sessionbuffers];
+
+        // 🔥 SAVE MERGED
+        ipcRenderer.send("set-recorded-chunks", merged);
 
         // 🔥 Notify main process
         ipcRenderer.send("recorder:stop");
@@ -221,7 +220,7 @@ async function stopRecording() {
           stream = null;
         }
 
-        resolve(buffers);
+        resolve(sessionbuffers);
       };
 
       mediaRecorder.stop();

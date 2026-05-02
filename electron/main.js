@@ -401,7 +401,7 @@ ipcMain.on("recorder:start", () => {
       recorderState.seconds = Math.floor((Date.now() - startTime) / 1000);
       broadcastRecorderState();
     }
-  }, 200);
+  }, 50);
 
   broadcastRecorderState();
 });

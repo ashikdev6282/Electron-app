@@ -6,6 +6,7 @@ export default function Waveform({
   isPlaying,
   setIsPlaying,
   onReady,
+  onTimeUpdate,
 }) {
   const containerRef = useRef(null);
   const waveRef = useRef(null);
@@ -25,12 +26,14 @@ export default function Waveform({
         container: containerRef.current,
         waveColor: "#ffffff",
         progressColor: "#ef4444",
-        cursorWidth: 0,
+        cursorWidth: 2,
         barWidth: 3,
         barGap: 2,
         height: 100,
+        minPxPerSec: 100, // 🔥 makes waveform scrollable
+        scrollParent: true,
         responsive: true,
-        interact: false,
+        interact: true,
       });
 
       wave.load(audioUrl);
@@ -38,6 +41,21 @@ export default function Waveform({
       /* 🔥 READY */
       wave.on("ready", () => {
         if (onReady) onReady(wave);
+      });
+
+      wave.on("audioprocess", () => {
+        const current = wave.getCurrentTime();
+
+        onTimeUpdate?.(current);
+      });
+
+      wave.on("interaction", () => {
+        const current = wave.getCurrentTime();
+
+        // 🔥 update timer immediately
+        if (onTimeUpdate) {
+          onTimeUpdate(current);
+        }
       });
 
       /* 🔥 FINISH */
@@ -70,9 +88,7 @@ export default function Waveform({
   return (
     <div className="relative overflow-hidden h-36 bg-[#0f0f0f] rounded-2xl">
       {/* CENTER ALIGN */}
-      <div className="absolute left-1/2 top-0 -translate-x-1/2 w-full">
-        <div ref={containerRef} />
-      </div>
+      <div ref={containerRef} />
     </div>
   );
 }

@@ -38,6 +38,7 @@ export default function Dictate() {
   const [showDiscardPopup, setShowDiscardPopup] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showHotkeyPopup, setShowHotkeyPopup] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
 
   //  REPLACE YOUR useEffect WITH THIS
 
@@ -89,11 +90,11 @@ export default function Dictate() {
   }, []);
 
   /*  FORMAT TIMER */
-  const formatTime = () => {
-    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
-    const s = String(seconds % 60).padStart(2, "0");
-    return `00:${m}:${s}`;
-  };
+  const formatTime = (sec) => {
+  const m = String(Math.floor(sec / 60)).padStart(2, "0");
+  const s = String(Math.floor(sec % 60)).padStart(2, "0");
+  return `00:${m}:${s}`;
+};
 
   /*  START / STOP RECORD */
   const handleRecord = async () => {
@@ -330,7 +331,7 @@ export default function Dictate() {
         </h1>
 
         <p className="text-5xl mt-5 tracking-widest font-semibold">
-          {formatTime()}
+          {isRecording ? formatTime(seconds) : formatTime(currentTime)}
         </p>
       </div>
 
@@ -345,6 +346,7 @@ export default function Dictate() {
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
             onReady={(wave) => (waveRef.current = wave)}
+            onTimeUpdate={setCurrentTime}
           />
         ) : (
           <div className="h-full" />

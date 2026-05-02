@@ -2,13 +2,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 const functionKeys = [
+  "None",
   "F1","F2","F3","F4","F5","F6",
   "F7","F8","F9","F10",
 ];
 
 export default function HotkeyPopup({ isOpen, onClose }) {
-  const [recordKey, setRecordKey] = useState("F8");
-  const [sendKey, setSendKey] = useState("F9");
+  const [recordKey, setRecordKey] = useState("None");
+  const [sendKey, setSendKey] = useState("None");
   const [error, setError] = useState("");
 
   if (!isOpen) return null;

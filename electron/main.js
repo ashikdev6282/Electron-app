@@ -36,10 +36,18 @@ let mainWindow = null;
 let floatingWindow = null;
 let isUserLoggedIn = false;
 
-let shortcuts = store.get("shortcuts", {
-  record: "F8",
-  send: "F9",
-});
+let shortcuts = store.get("shortcuts");
+
+if (!shortcuts) {
+  shortcuts = { record: "None", send: "None" };
+  store.set("shortcuts", shortcuts);
+}
+
+// 🔥 migrate old default users
+if (shortcuts.record === "F8" && shortcuts.send === "F9") {
+  shortcuts = { record: "None", send: "None" };
+  store.set("shortcuts", shortcuts);
+}
 
 /* 🔥 GLOBAL AUDIO STORAGE */
 let recordedChunksGlobal = [];
@@ -204,51 +212,55 @@ function registerShortcuts() {
   globalShortcut.unregisterAll();
 
   // 🎙 RECORD (TOGGLE)
-  globalShortcut.register(shortcuts.record, () => {
-    mainWindow?.webContents.send("shortcut:record");
-    floatingWindow?.webContents.send("shortcut:record");
-  });
+  if (shortcuts.record !== "None") {
+    globalShortcut.register(shortcuts.record, () => {
+      mainWindow?.webContents.send("shortcut:record");
+      floatingWindow?.webContents.send("shortcut:record");
+    });
+  }
 
   // 📤 SEND (SMART FLOW)
-  globalShortcut.register(shortcuts.send, () => {
-  // 🔥 STEP 1: If recording → stop properly
-  if (recorderState.isRecording) {
-    mainWindow?.webContents.send("force-stop-recorder");
-    floatingWindow?.webContents.send("force-stop-recorder");
+  if (shortcuts.send !== "None") {
+    globalShortcut.register(shortcuts.send, () => {
+      // 🔥 STEP 1: If recording → stop properly
+      if (recorderState.isRecording) {
+        mainWindow?.webContents.send("force-stop-recorder");
+        floatingWindow?.webContents.send("force-stop-recorder");
 
-    // 🔥 STEP 2: OPEN MAIN WINDOW + SEND FLOW
-    setTimeout(() => {
-      // ✅ THIS IS THE MISSING PIECE
-      if (mainWindow) {
-        mainWindow.show();
-        mainWindow.focus();
-        mainWindow.webContents.send("navigate", "dictate");
+        // 🔥 STEP 2: OPEN MAIN WINDOW + SEND FLOW
+        setTimeout(() => {
+          // ✅ THIS IS THE MISSING PIECE
+          if (mainWindow) {
+            mainWindow.show();
+            mainWindow.focus();
+            mainWindow.webContents.send("navigate", "dictate");
+          }
+
+          if (floatingWindow) {
+            floatingWindow.hide();
+          }
+
+          // ✅ THEN trigger send popup
+          mainWindow?.webContents.send("trigger-send-flow");
+          floatingWindow?.webContents.send("trigger-send-flow");
+        }, 300);
+      } else {
+        // 🔥 NOT RECORDING → JUST OPEN + SEND
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send("navigate", "dictate");
+        }
+
+        if (floatingWindow) {
+          floatingWindow.hide();
+        }
+
+        mainWindow?.webContents.send("trigger-send-flow");
+        floatingWindow?.webContents.send("trigger-send-flow");
       }
-
-      if (floatingWindow) {
-        floatingWindow.hide();
-      }
-
-      // ✅ THEN trigger send popup
-      mainWindow?.webContents.send("trigger-send-flow");
-      floatingWindow?.webContents.send("trigger-send-flow");
-    }, 300);
-  } else {
-    // 🔥 NOT RECORDING → JUST OPEN + SEND
-    if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
-      mainWindow.webContents.send("navigate", "dictate");
-    }
-
-    if (floatingWindow) {
-      floatingWindow.hide();
-    }
-
-    mainWindow?.webContents.send("trigger-send-flow");
-    floatingWindow?.webContents.send("trigger-send-flow");
+    });
   }
-});
 
   console.log("✅ Shortcuts registered:", shortcuts);
 }

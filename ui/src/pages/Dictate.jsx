@@ -174,6 +174,7 @@ export default function Dictate() {
   const handleDiscard = () => {
     setAudioUrl(null);
     setIsPlaying(false);
+    setCurrentTime(0)
     chunksRef.current = [];
 
     window.electronAPI.recorderReset();

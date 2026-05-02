@@ -41,6 +41,15 @@ export default function Waveform({
       /* 🔥 READY */
       wave.on("ready", () => {
         if (onReady) onReady(wave);
+
+        // ✅ SET INITIAL TIMER TO END (or start)
+        const duration = wave.getDuration();
+
+        // 👉 OPTION A: show full duration
+        onTimeUpdate?.(duration);
+
+        // 👉 OR OPTION B (better UX): start from 0
+        // onTimeUpdate?.(0);
       });
 
       wave.on("audioprocess", () => {

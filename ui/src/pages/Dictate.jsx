@@ -91,10 +91,10 @@ export default function Dictate() {
 
   /*  FORMAT TIMER */
   const formatTime = (sec) => {
-  const m = String(Math.floor(sec / 60)).padStart(2, "0");
-  const s = String(Math.floor(sec % 60)).padStart(2, "0");
-  return `00:${m}:${s}`;
-};
+    const m = String(Math.floor(sec / 60)).padStart(2, "0");
+    const s = String(Math.floor(sec % 60)).padStart(2, "0");
+    return `00:${m}:${s}`;
+  };
 
   /*  START / STOP RECORD */
   const handleRecord = async () => {
@@ -174,7 +174,7 @@ export default function Dictate() {
   const handleDiscard = () => {
     setAudioUrl(null);
     setIsPlaying(false);
-    setCurrentTime(0)
+    setCurrentTime(0);
     chunksRef.current = [];
 
     window.electronAPI.recorderReset();
@@ -360,15 +360,18 @@ export default function Dictate() {
             const wave = waveRef.current;
             if (!wave) return;
 
-            const duration = wave.getDuration();
-            const current = wave.getCurrentTime();
+            const wasPlaying = isPlaying;
 
-            wave.pause(); // 🔥 fix overlap
+            // 🔥 Jump to beginning
+            wave.setTime(0);
 
-            const newTime = Math.max(0, current - 5);
-            wave.seekTo(newTime / duration);
+            // 🔥 Sync timer immediately
+            setCurrentTime(0);
 
-            if (isPlaying) wave.play();
+            // 🔥 Optional: continue playing from start
+            if (wasPlaying) {
+              wave.play();
+            }
           }}
           className="text-gray-600 w-6 h-6 cursor-pointer"
         />
@@ -392,6 +395,9 @@ export default function Dictate() {
             wave.pause(); // 🔥 fix overlap
 
             const newTime = Math.min(duration, current + 5);
+
+            wave.setTime(newTime); // 🔥 fix jump when near end
+            setCurrentTime(newTime);
             wave.seekTo(newTime / duration);
 
             if (isPlaying) wave.play();
